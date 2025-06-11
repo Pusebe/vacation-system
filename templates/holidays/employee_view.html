@@ -1,0 +1,157 @@
+<div class="row row-deck row-cards">
+    <!-- Información sobre festivos -->
+    <div class="col-12">
+        <div class="alert alert-info">
+            <div class="d-flex">
+                <div>
+                    <i class="ti ti-info-circle me-2"></i>
+                </div>
+                <div>
+                    <h4 class="alert-title">Festivos Trabajados</h4>
+                    <div class="text-muted">
+                        Marca los festivos que hayas trabajado. Una vez aprobados por tu supervisor, podrás solicitar días de recuperación.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Festivos aprobados disponibles para recuperación -->
+    {% if approved_holidays %}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Festivos Disponibles para Recuperación</h3>
+                    <span class="badge bg-success ms-auto">{{ available_count }}</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-vcenter card-table">
+                            <thead>
+                                <tr>
+                                    <th class="w-1">Acción</th>
+                                    <th>Estado</th>
+                                    <th>Día trabajado</th>
+                                    <th>Descripción</th>
+                                    <th>Fecha aprobación</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for holiday in approved_holidays %}
+                                    <tr>
+                                        <td>
+                                            {% set recovery_status, recovery_request = holiday.get_recovery_status() %}
+                                            {% if recovery_status == 'approved' %}
+                                                <button type="button" class="btn btn-success btn-sm" disabled>
+                                                    <i class="ti ti-check me-1"></i>
+                                                    Completada
+                                                </button>
+                                            {% elif recovery_status == 'pending' %}
+                                                <button type="button" class="btn btn-outline-warning btn-sm" disabled>
+                                                    En espera
+                                                </button>
+                                            {% else %}
+                                                <button type="button" class="btn btn-warning btn-sm" 
+                                                        onclick="showRecoveryModal({{ holiday.id }}, '{{ holiday.date.strftime('%d/%m/%y') }}', '{{ holiday.description or 'Sin descripción' }}')">
+                                                    Pedir día
+                                                </button>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% set recovery_status, recovery_request = holiday.get_recovery_status() %}
+                                            {% if recovery_status %}
+                                                <span class="badge bg-{{ 'warning' if recovery_status == 'pending' else 'success' if recovery_status == 'approved' else 'danger' }}">
+                                                    {{ 'Pendiente' if recovery_status == 'pending' else 'Aprobada' if recovery_status == 'approved' else 'Rechazada' }}
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Disponible</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="font-weight-medium">{{ holiday.date.strftime('%d/%m/%y') }}</div>
+                                        </td>
+                                        <td>
+                                            {{ holiday.description or 'Sin descripción' }}
+                                        </td>
+                                        <td>
+                                            {{ holiday.approved_at.strftime('%d/%m/%y') if holiday.approved_at else '-' }}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+    
+    <!-- Mis festivos trabajados (pendientes y rechazados) -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Mis Festivos Trabajados</h3>
+            </div>
+            <div class="card-body p-0">
+                {% set pending_and_rejected = my_holidays | selectattr('status', 'in', ['pending', 'rejected']) | list %}
+                {% if pending_and_rejected %}
+                    <div class="table-responsive">
+                        <table class="table table-vcenter card-table">
+                            <thead>
+                                <tr>
+                                    <th>Día trabajado</th>
+                                    <th>Estado</th>
+                                    <th>Descripción</th>
+                                    <th class="w-1">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for holiday in pending_and_rejected %}
+                                    <tr>
+                                        <td>
+                                            <div class="font-weight-medium">{{ holiday.date.strftime('%d/%m/%y') }}</div>
+                                        </td>
+                                        <td>
+                                            <span class="{{ holiday.get_status_class() }}">{{ holiday.get_status_text() }}</span>
+                                            {% if holiday.status == 'rejected' %}
+                                                <br><small class="text-danger">
+                                                    {% if 'Motivo del rechazo:' in (holiday.description or '') %}
+                                                        {{ holiday.description.split('Motivo del rechazo:')[1].strip() }}
+                                                    {% else %}
+                                                        Sin motivo especificado
+                                                    {% endif %}
+                                                </small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if holiday.status == 'rejected' and 'Motivo del rechazo:' in (holiday.description or '') %}
+                                                {{ holiday.description.split('Motivo del rechazo:')[0].strip() or 'Sin descripción' }}
+                                            {% else %}
+                                                {{ holiday.description or 'Sin descripción' }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if holiday.can_be_cancelled() %}
+                                                <form method="POST" action="{{ url_for('holidays.cancel', holiday_id=holiday.id) }}" style="display: inline;">
+                                                    <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('¿Cancelar este festivo?')">
+                                                        <i class="ti ti-trash"></i>
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i class="ti ti-calendar-event mb-3" style="font-size: 3rem;"></i>
+                        <div class="h4">No tienes festivos trabajados pendientes o rechazados</div>
+                        <div>Los festivos aprobados aparecen arriba para solicitar recuperación</div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

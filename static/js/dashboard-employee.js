@@ -55,6 +55,24 @@ function toggleHolidayCustomDescription() {
     }
 }
 
+// Cancelar solicitud de vacaciones
+function cancelRequest(requestId) {
+    if (confirm('¿Cancelar esta solicitud?')) {
+        fetch(`/requests/${requestId}/cancel`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }
+        }).then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Error al cancelar la solicitud');
+            }
+        });
+    }
+}
+
 // Inicialización cuando se carga el DOM
 document.addEventListener('DOMContentLoaded', function() {
     // Ajustar descripción al enviar formulario de festivos

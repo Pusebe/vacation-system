@@ -25,13 +25,23 @@ def index():
     else:
         # Empleado ve solo sus festivos
         my_holidays = g.user.get_worked_holidays()
-        # Pasar TODOS los festivos aprobados - el template decidirá qué mostrar
+        
+        # TODOS los festivos aprobados (para mostrar en la tabla)
         approved_holidays = [h for h in my_holidays if h.status == 'approved']
+        
+        # Solo festivos aprobados SIN recuperación asociada (para el contador verde)
+        available_for_recovery = []
+        for holiday in approved_holidays:
+            recovery_status, _ = holiday.get_recovery_status()
+            if not recovery_status:  # No tiene recuperación asociada
+                available_for_recovery.append(holiday)
         
         return render_template('holidays.html',
                              is_admin=False,
                              my_holidays=my_holidays,
                              approved_holidays=approved_holidays,
+                             available_for_recovery=available_for_recovery,
+                             available_count=len(available_for_recovery),
                              common_holidays=WorkedHoliday.get_common_holidays())
 
 @holidays_bp.route('/holidays', methods=['POST'])

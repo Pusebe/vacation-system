@@ -1,97 +1,127 @@
-<!-- Historial del empleado -->
-<div class="row row-deck row-cards">
-    <!-- Mis solicitudes recientes (solo vacaciones) -->
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Mis Vacaciones Recientes</h3>
-            </div>
-            <div class="card-body">
-                {% if my_vacation_requests %}
-                    {% for request in my_vacation_requests[:5] %}
-                        <div class="d-flex align-items-center mb-3">
-                            <span class="avatar avatar-sm me-3 bg-primary">
-                                <i class="ti ti-beach"></i>
-                            </span>
-                            <div class="flex-fill">
-                                <div class="font-weight-medium">Vacaciones</div>
-                                <div class="text-muted">
-                                    {% if request.start_date == request.end_date %}
-                                        {{ request.start_date.strftime('%d/%m/%y') }}
-                                    {% else %}
-                                        {{ request.start_date.strftime('%d/%m/%y') }} - {{ request.end_date.strftime('%d/%m/%y') }}
-                                    {% endif %}
-                                </div>
+<!-- Historial del empleado (debajo del calendario) -->
+<div class="col-12">
+    <div class="row row-deck row-cards">
+        <!-- Solo Mis vacaciones (sin recuperaciones) -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Mis Vacaciones</h3>
+                </div>
+                <div class="card-body">
+                    {% if my_requests %}
+                        {% set vacation_requests = my_requests | selectattr('type', 'equalto', 'vacation') | list %}
+                        {% if vacation_requests %}
+                            <div class="table-responsive">
+                                <table class="table table-vcenter">
+                                    <thead>
+                                        <tr>
+                                            <th>Fechas</th>
+                                            <th>Días</th>
+                                            <th>Estado</th>
+                                            <th>Motivo</th>
+                                            <th class="w-1">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for request in vacation_requests %}
+                                            <tr>
+                                                <td>
+                                                    {% if request.start_date == request.end_date %}
+                                                        <div class="font-weight-medium">{{ request.start_date|date }}</div>
+                                                    {% else %}
+                                                        <div class="font-weight-medium">{{ request.start_date|date }}</div>
+                                                        <div class="text-muted">{{ request.end_date|date }}</div>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-primary">{{ request.calculate_days() }} días</span>
+                                                </td>
+                                                <td>
+                                                    <span class="{{ request.get_status_class() }}">{{ request.get_status_text() }}</span>
+                                                </td>
+                                                <td>
+                                                    <div class="text-truncate" style="max-width: 200px;">
+                                                        {{ request.reason or 'Sin motivo especificado' }}
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    {% if request.can_be_cancelled() %}
+                                                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="cancelRequest({{ request.id }})">
+                                                            <i class="ti ti-trash"></i>
+                                                        </button>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
                             </div>
-                            <div class="ms-auto">
-                                <span class="{{ request.get_status_class() }}">{{ request.get_status_text() }}</span>
+                        {% else %}
+                            <div class="text-center text-muted py-4">
+                                <i class="ti ti-beach mb-2" style="font-size: 2rem;"></i>
+                                <div>No tienes solicitudes de vacaciones</div>
                             </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="ti ti-beach mb-2" style="font-size: 2rem;"></i>
+                            <div>No tienes solicitudes de vacaciones</div>
                         </div>
-                    {% endfor %}
-                    <div class="mt-3">
-                        <a href="{{ url_for('requests.index') }}" class="btn btn-outline-primary btn-sm">
-                            Ver todas mis vacaciones
-                        </a>
-                    </div>
-                {% else %}
-                    <div class="text-center text-muted py-4">
-                        <i class="ti ti-beach mb-2" style="font-size: 2rem;"></i>
-                        <div>No tienes solicitudes de vacaciones</div>
-                    </div>
-                {% endif %}
+                    {% endif %}
+                </div>
             </div>
         </div>
-    </div>
-    
-    <!-- Mis festivos trabajados -->
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Mis Festivos Trabajados</h3>
-            </div>
-            <div class="card-body">
-                {% if my_holidays %}
-                    {% for holiday in my_holidays[:5] %}
-                        <div class="d-flex align-items-center mb-3">
-                            <span class="avatar avatar-sm me-3 bg-info">
-                                <i class="ti ti-calendar"></i>
-                            </span>
-                            <div class="flex-fill">
-                                <div class="font-weight-medium">{{ holiday.date.strftime('%d/%m/%y') }}</div>
-                                <div class="text-muted">
-                                    {{ holiday.description or 'Sin descripción' }}
+        
+        <!-- Mis festivos trabajados -->
+        <div class="col-12 mt-3">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Mis Festivos Trabajados</h3>
+                </div>
+                <div class="card-body">
+                    {% if my_holidays %}
+                        {% for holiday in my_holidays[:5] %}
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="avatar avatar-sm me-3 bg-info">
+                                    <i class="ti ti-calendar"></i>
+                                </span>
+                                <div class="flex-fill">
+                                    <div class="font-weight-medium">{{ holiday.date|date }}</div>
+                                    <div class="text-muted">
+                                        {{ holiday.description or 'Sin descripción' }}
+                                    </div>
+                                </div>
+                                <div class="ms-auto">
+                                    <span class="{{ holiday.get_status_class() }}">{{ holiday.get_status_text() }}</span>
+                                    {% if holiday.status == 'approved' %}
+                                        {% set recovery_status, recovery_request = holiday.get_recovery_status() %}
+                                        {% if recovery_status %}
+                                            <br><small class="text-muted">
+                                                {% if recovery_status == 'pending' %}
+                                                    Recuperación pendiente
+                                                {% elif recovery_status == 'approved' %}
+                                                    Recuperación aprobada
+                                                {% elif recovery_status == 'rejected' %}
+                                                    Recuperación rechazada
+                                                {% endif %}
+                                            </small>
+                                        {% endif %}
+                                    {% endif %}
                                 </div>
                             </div>
-                            <div class="ms-auto">
-                                <span class="{{ holiday.get_status_class() }}">{{ holiday.get_status_text() }}</span>
-                                {% if holiday.status == 'approved' %}
-                                    {% set recovery_status, recovery_request = holiday.get_recovery_status() %}
-                                    {% if recovery_status %}
-                                        <br><small class="text-muted">
-                                            {% if recovery_status == 'pending' %}
-                                                Recuperación pendiente
-                                            {% elif recovery_status == 'approved' %}
-                                                Recuperación aprobada
-                                            {% elif recovery_status == 'rejected' %}
-                                                Recuperación rechazada
-                                            {% endif %}
-                                        </small>
-                                    {% endif %}
-                                {% endif %}
-                            </div>
+                        {% endfor %}
+                        <div class="mt-3">
+                            <a href="{{ url_for('holidays.index') }}" class="btn btn-outline-info btn-sm">
+                                Ver todos mis festivos
+                            </a>
                         </div>
-                    {% endfor %}
-                    <div class="mt-3">
-                        <a href="{{ url_for('holidays.index') }}" class="btn btn-outline-info btn-sm">
-                            Ver todos mis festivos
-                        </a>
-                    </div>
-                {% else %}
-                    <div class="text-center text-muted py-4">
-                        <i class="ti ti-calendar mb-2" style="font-size: 2rem;"></i>
-                        <div>No has marcado festivos trabajados</div>
-                    </div>
-                {% endif %}
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="ti ti-calendar mb-2" style="font-size: 2rem;"></i>
+                            <div>No has marcado festivos trabajados</div>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>

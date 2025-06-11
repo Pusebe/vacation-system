@@ -1,0 +1,136 @@
+<!-- Modal para admin crear festivo trabajado -->
+<div class="modal modal-blur fade" id="adminCreateHolidayModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Marcar Festivo Trabajado para Empleado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('holidays.create') }}">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="ti ti-info-circle me-2"></i>
+                        Como administrador, puedes marcar festivos trabajados directamente aprobados para cualquier empleado.
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Empleado</label>
+                            <select name="user_id" class="form-select" required>
+                                <option value="">Seleccionar empleado</option>
+                                {% for dept in departments %}
+                                    <optgroup label="{{ dept.name }}">
+                                        {% for emp in dept.get_employees() %}
+                                            <option value="{{ emp.id }}">{{ emp.name }}</option>
+                                        {% endfor %}
+                                    </optgroup>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Fecha del festivo trabajado</label>
+                            <input type="date" name="date" class="form-control" required>
+                            <div class="form-hint">Fecha en la que el empleado trabajó en un día festivo</div>
+                        </div>
+                        
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Descripción del festivo</label>
+                            <select name="description" class="form-select" onchange="toggleAdminCustomDescription()">
+                                <option value="">Seleccionar festivo...</option>
+                                {% for holiday_desc in common_holidays %}
+                                    <option value="{{ holiday_desc }}">{{ holiday_desc }}</option>
+                                {% endfor %}
+                                <option value="custom">Otro (especificar)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-12 mb-3 d-none" id="adminCustomDescriptionDiv">
+                            <label class="form-label">Descripción personalizada</label>
+                            <input type="text" name="custom_description" class="form-control" placeholder="Describe el festivo trabajado...">
+                        </div>
+                        
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="auto_approve" value="1" checked>
+                                <label class="form-check-label">
+                                    Aprobar automáticamente
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Marcar y Aprobar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para editar festivo (solo admin) -->
+<div class="modal modal-blur fade" id="editHolidayModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Festivo Trabajado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="" id="editHolidayForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Fecha del festivo</label>
+                            <input type="date" name="date" class="form-control" required id="editHolidayDate">
+                        </div>
+                        
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Descripción</label>
+                            <input type="text" name="description" class="form-control" id="editHolidayDescription" placeholder="Descripción del festivo...">
+                        </div>
+                        
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Estado</label>
+                            <select name="status" class="form-select" id="editHolidayStatus">
+                                <option value="pending">Pendiente</option>
+                                <option value="approved">Aprobado</option>
+                                <option value="rejected">Rechazado</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para rechazar festivo (solo admin) -->
+<div class="modal modal-blur fade" id="rejectHolidayModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Rechazar Festivo Trabajado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="" id="rejectHolidayForm">
+                <div class="modal-body">
+                    <p>¿Estás seguro de que quieres rechazar el festivo trabajado de <strong id="rejectHolidayUserName"></strong> del <strong id="rejectHolidayDate"></strong>?</p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Motivo del rechazo (opcional)</label>
+                        <textarea name="reason" class="form-control" rows="3" placeholder="Explica por qué se rechaza este festivo..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Rechazar Festivo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

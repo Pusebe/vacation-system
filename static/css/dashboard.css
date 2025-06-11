@@ -1,0 +1,154 @@
+/* Estilos específicos del Dashboard */
+
+/* FullCalendar customizations */
+.fc {
+    font-family: inherit;
+}
+
+.fc-toolbar-title {
+    font-size: 1.1rem !important;
+    font-weight: 600;
+}
+
+.fc-button-group .fc-button {
+    background: var(--tblr-btn-bg);
+    border-color: var(--tblr-btn-border-color);
+    color: var(--tblr-btn-color);
+    font-size: 0.8125rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.fc-button-group .fc-button:hover {
+    background: var(--tblr-btn-hover-bg);
+    border-color: var(--tblr-btn-hover-border-color);
+    color: var(--tblr-btn-hover-color);
+}
+
+.fc-button-primary:not(:disabled).fc-button-active {
+    background: var(--tblr-primary);
+    border-color: var(--tblr-primary);
+}
+
+.fc-event {
+    border: none !important;
+    border-radius: 3px !important;
+    padding: 1px 4px !important;
+    font-size: 0.75rem !important;
+}
+
+.fc-event-title {
+    font-weight: 500;
+}
+
+.fc-daygrid-day-number {
+    color: var(--tblr-body-color);
+    text-decoration: none;
+    font-size: 0.875rem;
+}
+
+.fc-col-header-cell {
+    background: var(--tblr-bg-surface);
+    font-size: 0.8125rem;
+}
+
+.fc-daygrid-event-harness {
+    margin-bottom: 1px;
+}
+
+/* Hacer que el calendario empiece en lunes */
+.fc-day-mon {
+    order: 1;
+}
+
+.fc-day-tue {
+    order: 2;
+}
+
+.fc-day-wed {
+    order: 3;
+}
+
+.fc-day-thu {
+    order: 4;
+}
+
+.fc-day-fri {
+    order: 5;
+}
+
+.fc-day-sat {
+    order: 6;
+}
+
+.fc-day-sun {
+    order: 7;
+}
+
+/* Botones de acciones rápidas */
+.btn.h-100 {
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+/* Mejorar la apariencia de las tarjetas de estadísticas */
+.card-sm .card-body {
+    padding: 1rem;
+}
+
+.avatar {
+    flex-shrink: 0;
+}
+
+/* Espaciado en las listas de historial */
+.card-body .d-flex.align-items-center {
+    transition: background-color 0.15s ease;
+    padding: 0.25rem;
+    border-radius: 0.375rem;
+}
+
+.card-body .d-flex.align-items-center:hover {
+    background-color: var(--tblr-hover-bg);
+}
+
+/* Mejorar las alertas de estado */
+.alert {
+    border-radius: 0.5rem;
+}
+
+.alert-title {
+    margin-bottom: 0.25rem;
+}
+
+/* Botones con iconos */
+.btn i {
+    margin-right: 0.25rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .btn.h-100 {
+        min-height: 60px;
+    }
+    
+    .fc-button-group .fc-button {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.4rem;
+    }
+    
+    .fc-toolbar-title {
+        font-size: 1rem !important;
+    }
+}
+
+/* Estados de validación en modales */
+.alert {
+    border-radius: 0.375rem;
+}
+
+.alert i {
+    flex-shrink: 0;
+}

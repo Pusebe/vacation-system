@@ -1,0 +1,86 @@
+<!-- Modal para marcar nuevo festivo (empleados) -->
+<div class="modal modal-blur fade" id="newHolidayModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Marcar Festivo Trabajado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('holidays.create') }}">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Fecha del festivo trabajado</label>
+                            <input type="date" name="date" class="form-control" required max="{{ moment().format('YYYY-MM-DD') if moment else '' }}">
+                            <div class="form-hint">Selecciona la fecha en la que trabajaste en un día festivo</div>
+                        </div>
+                        
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Descripción del festivo</label>
+                            <select name="description" class="form-select" onchange="toggleCustomDescription()">
+                                <option value="">Seleccionar festivo...</option>
+                                {% for holiday_desc in common_holidays %}
+                                    <option value="{{ holiday_desc }}">{{ holiday_desc }}</option>
+                                {% endfor %}
+                                <option value="custom">Otro (especificar)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-12 mb-3 d-none" id="customDescriptionDiv">
+                            <label class="form-label">Descripción personalizada</label>
+                            <input type="text" name="custom_description" class="form-control" placeholder="Describe el festivo trabajado...">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Marcar Festivo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para solicitar recuperación -->
+<div class="modal modal-blur fade" id="recoveryModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Solicitar Recuperación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="" id="recoveryForm">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <div class="d-flex">
+                            <div>
+                                <i class="ti ti-info-circle me-2"></i>
+                            </div>
+                            <div>
+                                <strong>Festivo trabajado:</strong> <span id="recoveryHolidayInfo"></span><br>
+                                <small class="text-muted">La recuperación será de <strong>1 día</strong></small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Fecha de recuperación</label>
+                            <input type="date" name="recovery_date" class="form-control" required min="{{ (moment().format('YYYY-MM-DD')) if moment else '' }}">
+                            <div class="form-hint">Selecciona el día que quieres tomar como recuperación</div>
+                        </div>
+                        
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Motivo adicional (opcional)</label>
+                            <textarea name="reason" class="form-control" rows="3" placeholder="Explica por qué necesitas esta fecha específica..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Solicitar Recuperación</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

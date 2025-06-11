@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Solicitudes - Sistema de Vacaciones{% endblock %}
+{% block title %}
+    {% if is_admin %}
+        Solicitudes - Sistema de Vacaciones
+    {% else %}
+        Mis Vacaciones - Sistema de Vacaciones
+    {% endif %}
+{% endblock %}
 
 {% block content %}
 <div class="page-header d-print-none">
@@ -8,13 +14,17 @@
         <div class="row g-2 align-items-center">
             <div class="col">
                 <h2 class="page-title">
-                    Solicitudes de Vacaciones
+                    {% if is_admin %}
+                        Solicitudes de Vacaciones
+                    {% else %}
+                        Mis Vacaciones
+                    {% endif %}
                 </h2>
                 <div class="text-muted">
                     {% if is_admin %}
                         Gestionar todas las solicitudes de vacaciones y recuperaciones
                     {% else %}
-                        Solicitar vacaciones o días de recuperación
+                        Gestionar mis solicitudes de vacaciones
                     {% endif %}
                 </div>
             </div>
@@ -200,9 +210,8 @@
             </div>
             
         {% else %}
-            <!-- Vista de Empleado -->
+            <!-- Vista de Empleado - Solo Vacaciones -->
             <div class="row row-deck row-cards">
-                <!-- Mis vacaciones -->
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header">
@@ -227,74 +236,14 @@
                                                 <tr>
                                                     <td>
                                                         {% if request.start_date == request.end_date %}
-                                                            <div class="font-weight-medium">{{ request.start_date.strftime('%d/%m/%y') }}</div>
+                                                            <div class="font-weight-medium">{{ request.start_date|date }}</div>
                                                         {% else %}
-                                                            <div class="font-weight-medium">{{ request.start_date.strftime('%d/%m/%y') }}</div>
-                                                            <div class="text-muted">{{ request.end_date.strftime('%d/%m/%y') }}</div>
+                                                            <div class="font-weight-medium">{{ request.start_date|date }}</div>
+                                                            <div class="text-muted">{{ request.end_date|date }}</div>
                                                         {% endif %}
                                                     </td>
                                                     <td>
                                                         <span class="badge bg-primary">{{ request.calculate_days() }} días</span>
-                                                    </td>
-                                                    <td>
-                                                        <span class="{{ request.get_status_class() }}">{{ request.get_status_text() }}</span>
-                                                    </td>
-                                                    <td>
-                                                        <div class="text-truncate" style="max-width: 200px;">
-                                                            {{ request.reason or 'Sin motivo especificado' }}
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        {% if request.can_be_cancelled() %}
-                                                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="cancelRequest({{ request.id }})">
-                                                                <i class="ti ti-trash"></i>
-                                                            </button>
-                                                        {% endif %}
-                                                    </td>
-                                                </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            {% else %}
-                                <div class="text-center text-muted py-4">
-                                    <i class="ti ti-beach mb-3" style="font-size: 3rem;"></i>
-                                    <div>No tienes solicitudes de vacaciones</div>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Mis recuperaciones de festivo -->
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">Mis Recuperaciones de Festivo</h3>
-                        </div>
-                        <div class="card-body p-0">
-                            {% set recovery_requests = my_recovery_requests | selectattr('type', 'equalto', 'recovery') | list %}
-                            {% if recovery_requests %}
-                                <div class="table-responsive">
-                                    <table class="table table-vcenter card-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Fecha</th>
-                                                <th>Días</th>
-                                                <th>Estado</th>
-                                                <th>Motivo</th>
-                                                <th class="w-1">Acciones</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for request in recovery_requests %}
-                                                <tr>
-                                                    <td>
-                                                        <div class="font-weight-medium">{{ request.start_date.strftime('%d/%m/%y') }}</div>
-                                                        <small class="text-muted">Recuperación</small>
-                                                    </td>
-                                                    <td>
-                                                        <span class="badge bg-warning">{{ request.calculate_days() }} día</span>
                                                     </td>
                                                     <td>
                                                         <span class="{{ request.get_status_class() }}">{{ request.get_status_text() }}</span>
@@ -311,9 +260,9 @@
                                                     <td>
                                                         <div class="text-truncate" style="max-width: 200px;">
                                                             {% if request.status == 'rejected' and 'Motivo del rechazo:' in (request.reason or '') %}
-                                                                {{ request.reason.split('Motivo del rechazo:')[0].strip() or 'Recuperación de festivo trabajado' }}
+                                                                {{ request.reason.split('Motivo del rechazo:')[0].strip() or 'Sin motivo especificado' }}
                                                             {% else %}
-                                                                {{ request.reason or 'Recuperación de festivo trabajado' }}
+                                                                {{ request.reason or 'Sin motivo especificado' }}
                                                             {% endif %}
                                                         </div>
                                                     </td>
@@ -331,9 +280,9 @@
                                 </div>
                             {% else %}
                                 <div class="text-center text-muted py-4">
-                                    <i class="ti ti-calendar-event mb-3" style="font-size: 3rem;"></i>
-                                    <div>No tienes solicitudes de recuperación</div>
-                                    <small class="text-muted">Usa el botón "Pedir día" en festivos aprobados para crear recuperaciones</small>
+                                    <i class="ti ti-beach mb-3" style="font-size: 3rem;"></i>
+                                    <div class="h4">No tienes solicitudes de vacaciones</div>
+                                    <div>Haz clic en "Nueva Solicitud" para comenzar</div>
                                 </div>
                             {% endif %}
                         </div>
@@ -355,117 +304,9 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-{% if not is_admin %}
-function toggleRequestType() {
-    validateDates();
-}
-
-function validateDates() {
-    const startDate = document.querySelector('input[name="start_date"]').value;
-    const endDate = document.querySelector('input[name="end_date"]').value;
-    const type = document.querySelector('select[name="type"]').value;
-    const resultDiv = document.getElementById('validation-result');
-    const submitBtn = document.getElementById('submitBtn');
-    
-    if (!startDate || !endDate || !type) {
-        resultDiv.style.display = 'none';
-        submitBtn.disabled = true;
-        return;
-    }
-    
-    fetch(`/api/validate-dates?start_date=${startDate}&end_date=${endDate}&type=${type}`)
-        .then(response => response.json())
-        .then(data => {
-            resultDiv.style.display = 'block';
-            if (data.available) {
-                resultDiv.className = 'alert alert-success';
-                resultDiv.innerHTML = `<i class="ti ti-check me-2"></i>${data.message}`;
-                submitBtn.disabled = false;
-            } else {
-                resultDiv.className = 'alert alert-danger';
-                resultDiv.innerHTML = `<i class="ti ti-x me-2"></i>${data.message}`;
-                submitBtn.disabled = true;
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            resultDiv.style.display = 'block';
-            resultDiv.className = 'alert alert-warning';
-            resultDiv.innerHTML = '<i class="ti ti-alert-triangle me-2"></i>Error al validar fechas';
-            submitBtn.disabled = true;
-        });
-}
-
-function cancelRequest(requestId) {
-    if (confirm('¿Cancelar esta solicitud?')) {
-        fetch(`/requests/${requestId}/cancel`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            }
-        }).then(response => {
-            if (response.ok) {
-                location.reload();
-            } else {
-                alert('Error al cancelar la solicitud');
-            }
-        });
-    }
-}
-{% endif %}
-
 {% if is_admin %}
-function approveRequest(requestId) {
-    if (confirm('¿Aprobar esta solicitud?')) {
-        fetch(`/requests/${requestId}/approve`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            }
-        }).then(response => {
-            if (response.ok) {
-                location.reload();
-            } else {
-                alert('Error al aprobar la solicitud');
-            }
-        });
-    }
-}
-
-function deleteRequest(requestId, userName) {
-    if (confirm(`¿Eliminar la solicitud de ${userName}? Esta acción no se puede deshacer.`)) {
-        fetch(`/requests/${requestId}/delete`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            }
-        }).then(response => {
-            if (response.ok) {
-                location.reload();
-            } else {
-                alert('Error al eliminar la solicitud');
-            }
-        });
-    }
-}
-
-function showRejectModal(requestId, userName) {
-    document.getElementById('rejectUserName').textContent = userName;
-    document.getElementById('rejectForm').action = `/requests/${requestId}/reject`;
-    new bootstrap.Modal(document.getElementById('rejectModal')).show();
-}
-
-function showEditModal(requestId, userName, type, status, startDate, endDate, reason) {
-    document.getElementById('editRequestUser').textContent = userName;
-    document.getElementById('editRequestForm').action = `/requests/${requestId}/edit`;
-    document.getElementById('editRequestType').value = type;
-    document.getElementById('editRequestStatus').value = status;
-    document.getElementById('editRequestStartDate').value = startDate;
-    document.getElementById('editRequestEndDate').value = endDate;
-    document.getElementById('editRequestReason').value = reason;
-    new bootstrap.Modal(document.getElementById('editRequestModal')).show();
-}
+    <script src="{{ url_for('static', filename='js/requests-admin.js') }}"></script>
+{% else %}
+    <script src="{{ url_for('static', filename='js/requests-employee.js') }}"></script>
 {% endif %}
-</script>
 {% endblock %}

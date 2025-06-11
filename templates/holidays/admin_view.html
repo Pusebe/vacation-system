@@ -1,0 +1,158 @@
+<div class="row row-deck row-cards">
+    <!-- Festivos pendientes de aprobación -->
+    {% if pending_holidays %}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Festivos Pendientes de Aprobación</h3>
+                    <span class="badge bg-warning ms-auto">{{ pending_holidays|length }}</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-vcenter card-table">
+                            <thead>
+                                <tr>
+                                    <th>Empleado</th>
+                                    <th>Fecha Festivo</th>
+                                    <th>Descripción</th>
+                                    <th>Fecha Marcado</th>
+                                    <th class="w-1">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for holiday in pending_holidays %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <span class="avatar avatar-sm me-3">{{ holiday.user.name[0] }}</span>
+                                                <div>
+                                                    <div class="font-weight-medium">{{ holiday.user.name }}</div>
+                                                    <div class="text-muted">{{ holiday.user.department.name }}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="font-weight-medium">{{ holiday.date.strftime('%d/%m/%y') }}</div>
+                                            <div class="text-muted small">
+                                                {% set day_name = holiday.date.strftime('%A') %}
+                                                {% if day_name == 'Monday' %}Lunes
+                                                {% elif day_name == 'Tuesday' %}Martes  
+                                                {% elif day_name == 'Wednesday' %}Miércoles
+                                                {% elif day_name == 'Thursday' %}Jueves
+                                                {% elif day_name == 'Friday' %}Viernes
+                                                {% elif day_name == 'Saturday' %}Sábado
+                                                {% elif day_name == 'Sunday' %}Domingo
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="text-truncate" style="max-width: 200px;">
+                                                {{ holiday.description or 'Sin descripción' }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {{ holiday.created_at.strftime('%d/%m/%y') }}
+                                        </td>
+                                        <td>
+                                            <div class="btn-list flex-nowrap">
+                                                <button type="button" class="btn btn-success btn-sm" onclick="approveHoliday({{ holiday.id }})">
+                                                    <i class="ti ti-check"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-danger btn-sm" onclick="showRejectHolidayModal({{ holiday.id }}, '{{ holiday.user.name }}', '{{ holiday.date|date }}')">
+                                                    <i class="ti ti-x"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-warning btn-sm" onclick="showEditHolidayModal({{ holiday.id }}, '{{ holiday.date }}', '{{ holiday.description or '' }}', '{{ holiday.status }}')">
+                                                    <i class="ti ti-edit"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteHoliday({{ holiday.id }}, '{{ holiday.user.name }}', '{{ holiday.date|date }}')">
+                                                    <i class="ti ti-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+    
+    <!-- Histórico de festivos -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Histórico de Festivos Trabajados</h3>
+            </div>
+            <div class="card-body p-0">
+                {% set historical_holidays = all_holidays | selectattr('status', 'in', ['approved', 'rejected']) | list %}
+                <div class="table-responsive">
+                    <table class="table table-vcenter card-table">
+                        <thead>
+                            <tr>
+                                <th>Empleado</th>
+                                <th>Día trabajado</th>
+                                <th>Descripción</th>
+                                <th>Estado</th>
+                                <th>Aprobado por</th>
+                                <th>Fecha aprobación</th>
+                                <th class="w-1">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for holiday in historical_holidays %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span class="avatar avatar-sm me-3">{{ holiday.user.name[0] }}</span>
+                                            <div>
+                                                <div class="font-weight-medium">{{ holiday.user.name }}</div>
+                                                <div class="text-muted">{{ holiday.user.department.name }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="font-weight-medium">{{ holiday.date.strftime('%d/%m/%y') }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="text-truncate" style="max-width: 200px;">
+                                            {{ holiday.description or 'Sin descripción' }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="{{ holiday.get_status_class() }}">{{ holiday.get_status_text() }}</span>
+                                    </td>
+                                    <td>
+                                        {% if holiday.approver %}
+                                            {{ holiday.approver.name }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if holiday.approved_at %}
+                                            {{ holiday.approved_at.strftime('%d/%m/%y') }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-list flex-nowrap">
+                                            <button type="button" class="btn btn-warning btn-sm" onclick="showEditHolidayModal({{ holiday.id }}, '{{ holiday.date }}', '{{ holiday.description or '' }}', '{{ holiday.status }}')">
+                                                <i class="ti ti-edit"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteHoliday({{ holiday.id }}, '{{ holiday.user.name }}', '{{ holiday.date.strftime('%d/%m/%y') }}')">
+                                                <i class="ti ti-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

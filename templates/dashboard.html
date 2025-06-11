@@ -234,37 +234,22 @@
                             <!-- Leyenda compacta -->
                             <div class="mb-3">
                                 <div class="d-flex flex-wrap gap-3">
-                                    {% if is_admin %}
-                                        <span class="d-flex align-items-center">
-                                            <span class="badge bg-primary me-2"></span>
-                                            <small>Vacaciones aprobadas</small>
-                                        </span>
-                                        <span class="d-flex align-items-center">
-                                            <span class="badge bg-warning me-2"></span>
-                                            <small>Recuperaciones aprobadas</small>
-                                        </span>
-                                        <span class="d-flex align-items-center">
-                                            <span class="badge bg-secondary me-2"></span>
-                                            <small>Vacaciones pendientes</small>
-                                        </span>
-                                        <span class="d-flex align-items-center">
-                                            <span class="badge" style="background: #ffc107;"></span>
-                                            <small class="ms-2">Recuperaciones pendientes</small>
-                                        </span>
-                                    {% else %}
-                                        <span class="d-flex align-items-center">
-                                            <span class="badge bg-success me-2"></span>
-                                            <small>Mis vacaciones</small>
-                                        </span>
-                                        <span class="d-flex align-items-center">
-                                            <span class="badge bg-warning me-2"></span>
-                                            <small>Mis recuperaciones</small>
-                                        </span>
-                                        <span class="d-flex align-items-center">
-                                            <span class="badge bg-info me-2"></span>
-                                            <small>Compañeros</small>
-                                        </span>
-                                    {% endif %}
+                                    <span class="d-flex align-items-center">
+                                        <span class="badge bg-primary me-2"></span>
+                                        <small>Vacaciones aprobadas</small>
+                                    </span>
+                                    <span class="d-flex align-items-center">
+                                        <span class="badge bg-warning me-2"></span>
+                                        <small>Recuperaciones aprobadas</small>
+                                    </span>
+                                    <span class="d-flex align-items-center">
+                                        <span class="badge bg-secondary me-2"></span>
+                                        <small>Vacaciones pendientes</small>
+                                    </span>
+                                    <span class="d-flex align-items-center">
+                                        <span class="badge" style="background: #ffc107;"></span>
+                                        <small class="ms-2">Recuperaciones pendientes</small>
+                                    </span>
                                 </div>
                             </div>
                             
@@ -273,314 +258,28 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Resumen de empleados -->
+                {% include 'dashboard/admin_employees_overview.html' %}
             </div>
             
         {% else %}
             <!-- Dashboard de Empleado -->
             <div class="row row-deck row-cards">
-                <!-- Estado actual -->
-                <div class="col-12">
-                    <div class="row row-cards">
-                        <div class="col-sm-6 col-lg-3">
-                            <div class="card card-sm">
-                                <div class="card-body">
-                                    <div class="row align-items-center">
-                                        <div class="col-auto">
-                                            <span class="bg-{{ 'success' if current_vacation else 'secondary' }} text-white avatar">
-                                                <i class="ti ti-beach"></i>
-                                            </span>
-                                        </div>
-                                        <div class="col">
-                                            <div class="font-weight-medium">
-                                                {% if current_vacation %}
-                                                    De vacaciones
-                                                {% else %}
-                                                    Trabajando
-                                                {% endif %}
-                                            </div>
-                                            <div class="text-muted">Estado actual</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-sm-6 col-lg-3">
-                            <div class="card card-sm">
-                                <div class="card-body">
-                                    <div class="row align-items-center">
-                                        <div class="col-auto">
-                                            <span class="bg-primary text-white avatar">
-                                                <i class="ti ti-calendar-stats"></i>
-                                            </span>
-                                        </div>
-                                        <div class="col">
-                                            <div class="font-weight-medium">{{ vacation_days_used }}</div>
-                                            <div class="text-muted">Días usados este año</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-sm-6 col-lg-3">
-                            <div class="card card-sm">
-                                <div class="card-body">
-                                    <div class="row align-items-center">
-                                        <div class="col-auto">
-                                            <span class="bg-warning text-white avatar">
-                                                <i class="ti ti-clock"></i>
-                                            </span>
-                                        </div>
-                                        <div class="col">
-                                            <div class="font-weight-medium">{{ pending_requests + pending_holidays }}</div>
-                                            <div class="text-muted">Pendientes de aprobación</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-sm-6 col-lg-3">
-                            <div class="card card-sm">
-                                <div class="card-body">
-                                    <div class="row align-items-center">
-                                        <div class="col-auto">
-                                            <span class="bg-info text-white avatar">
-                                                <i class="ti ti-users"></i>
-                                            </span>
-                                        </div>
-                                        <div class="col">
-                                            <div class="font-weight-medium">{{ dept_vacations|length }}</div>
-                                            <div class="text-muted">Compañeros de vacaciones</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <!-- 1. Acciones rápidas (lo primero que ve) -->
+                {% include 'dashboard/employee_quick_actions.html' %}
                 
-                <!-- Información actual -->
-                {% if current_vacation %}
-                    <div class="col-12">
-                        <div class="alert alert-success">
-                            <div class="d-flex">
-                                <div>
-                                    <i class="ti ti-beach me-2"></i>
-                                </div>
-                                <div>
-                                    <h4 class="alert-title">¡Estás de vacaciones!</h4>
-                                    <div class="text-muted">
-                                        Vacaciones del {{ current_vacation.start_date|date }} al {{ current_vacation.end_date|date }}.
-                                        {% if current_vacation.reason %}
-                                            Motivo: {{ current_vacation.reason }}
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {% endif %}
+                <!-- 2. Estadísticas -->
+                {% include 'dashboard/employee_stats.html' %}
                 
-                {% if next_vacation %}
-                    <div class="col-12">
-                        <div class="alert alert-info">
-                            <div class="d-flex">
-                                <div>
-                                    <i class="ti ti-calendar-plus me-2"></i>
-                                </div>
-                                <div>
-                                    <h4 class="alert-title">Próximas vacaciones</h4>
-                                    <div class="text-muted">
-                                        Del {{ next_vacation.start_date|date }} al {{ next_vacation.end_date|date }}.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {% endif %}
+                <!-- 3. Compañeros de vacaciones -->
+                {% include 'dashboard/employee_colleagues.html' %}
                 
-                <!-- Mis solicitudes recientes -->
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">Mis Solicitudes Recientes</h3>
-                        </div>
-                        <div class="card-body">
-                            {% if my_requests %}
-                                {% for request in my_requests[:5] %}
-                                    <div class="d-flex align-items-center mb-3">
-                                        <span class="avatar avatar-sm me-3 bg-{{ 'primary' if request.type == 'vacation' else 'warning' }}">
-                                            <i class="ti ti-{{ 'beach' if request.type == 'vacation' else 'clock' }}"></i>
-                                        </span>
-                                        <div class="flex-fill">
-                                            <div class="font-weight-medium">{{ request.get_type_text() }}</div>
-                                            <div class="text-muted">
-                                                {{ request.start_date|date }} - {{ request.end_date|date }}
-                                            </div>
-                                        </div>
-                                        <div class="ms-auto">
-                                            <span class="{{ request.get_status_class() }}">{{ request.get_status_text() }}</span>
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                                <div class="mt-3">
-                                    <a href="{{ url_for('requests.index') }}" class="btn btn-outline-primary btn-sm">
-                                        Ver todas mis solicitudes
-                                    </a>
-                                </div>
-                            {% else %}
-                                <div class="text-center text-muted py-4">
-                                    <i class="ti ti-inbox mb-2" style="font-size: 2rem;"></i>
-                                    <div>No tienes solicitudes</div>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
+                <!-- 4. Calendario departamental -->
+                {% include 'dashboard/employee_calendar.html' %}
                 
-                <!-- Mis festivos trabajados -->
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">Mis Festivos Trabajados</h3>
-                        </div>
-                        <div class="card-body">
-                            {% if my_holidays %}
-                                {% for holiday in my_holidays[:5] %}
-                                    <div class="d-flex align-items-center mb-3">
-                                        <span class="avatar avatar-sm me-3 bg-info">
-                                            <i class="ti ti-calendar"></i>
-                                        </span>
-                                        <div class="flex-fill">
-                                            <div class="font-weight-medium">{{ holiday.date|date }}</div>
-                                            <div class="text-muted">
-                                                {{ holiday.description or 'Sin descripción' }}
-                                            </div>
-                                        </div>
-                                        <div class="ms-auto">
-                                            <span class="{{ holiday.get_status_class() }}">{{ holiday.get_status_text() }}</span>
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                                <div class="mt-3">
-                                    <a href="{{ url_for('holidays.index') }}" class="btn btn-outline-info btn-sm">
-                                        Ver todos mis festivos
-                                    </a>
-                                </div>
-                            {% else %}
-                                <div class="text-center text-muted py-4">
-                                    <i class="ti ti-calendar mb-2" style="font-size: 2rem;"></i>
-                                    <div>No has marcado festivos trabajados</div>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Compañeros de vacaciones -->
-                {% if dept_vacations %}
-                    <div class="col-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h3 class="card-title">Compañeros de Vacaciones</h3>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    {% for colleague in dept_vacations %}
-                                        <div class="col-md-4 mb-3">
-                                            <div class="card card-sm bg-info-lt">
-                                                <div class="card-body">
-                                                    <div class="d-flex align-items-center">
-                                                        <span class="avatar avatar-sm me-3 bg-info">
-                                                            {{ colleague.name[0] }}
-                                                        </span>
-                                                        <div>
-                                                            <div class="font-weight-medium">{{ colleague.name }}</div>
-                                                            <div class="text-muted small">
-                                                                De vacaciones
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {% endif %}
-                
-                <!-- Acciones rápidas -->
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">Acciones Rápidas</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-4 mb-3">
-                                    <a href="{{ url_for('requests.index') }}" class="btn btn-primary w-100">
-                                        <i class="ti ti-calendar-plus me-2"></i>
-                                        Nueva Solicitud
-                                    </a>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <a href="{{ url_for('holidays.index') }}" class="btn btn-info w-100">
-                                        <i class="ti ti-calendar-event me-2"></i>
-                                        Marcar Festivo
-                                    </a>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <a href="{{ url_for('requests.index') }}" class="btn btn-outline-secondary w-100">
-                                        <i class="ti ti-history me-2"></i>
-                                        Ver Historial
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Calendario departamental -->
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <h3 class="card-title">Calendario del Departamento</h3>
-                                <div class="btn-group btn-group-sm">
-                                    <button type="button" class="btn btn-outline-primary" onclick="dashboardCalendar.changeView('dayGridMonth')">Mes</button>
-                                    <button type="button" class="btn btn-outline-primary" onclick="dashboardCalendar.changeView('listWeek')">Lista</button>
-                                    <button type="button" class="btn btn-outline-primary" onclick="dashboardCalendar.today()">Hoy</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <!-- Leyenda compacta -->
-                            <div class="mb-3">
-                                <div class="d-flex flex-wrap gap-3">
-                                    <span class="d-flex align-items-center">
-                                        <span class="badge bg-success me-2"></span>
-                                        <small>Mis vacaciones</small>
-                                    </span>
-                                    <span class="d-flex align-items-center">
-                                        <span class="badge bg-warning me-2"></span>
-                                        <small>Mis recuperaciones</small>
-                                    </span>
-                                    <span class="d-flex align-items-center">
-                                        <span class="badge bg-info me-2"></span>
-                                        <small>Compañeros</small>
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            <!-- Calendario -->
-                            <div id="dashboard-calendar" style="max-height: 600px;"></div>
-                        </div>
-                    </div>
-                </div>
+                <!-- 5. Historial (debajo del calendario) -->
+                {% include 'dashboard/employee_history.html' %}
             </div>
         {% endif %}
     </div>
@@ -594,122 +293,12 @@
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/es.global.min.js"></script>
 
-<style>
-    .fc {
-        font-family: inherit;
-    }
-    
-    .fc-toolbar-title {
-        font-size: 1.1rem !important;
-        font-weight: 600;
-    }
-    
-    .fc-button-group .fc-button {
-        background: var(--tblr-btn-bg);
-        border-color: var(--tblr-btn-border-color);
-        color: var(--tblr-btn-color);
-        font-size: 0.8125rem;
-        padding: 0.25rem 0.5rem;
-    }
-    
-    .fc-button-group .fc-button:hover {
-        background: var(--tblr-btn-hover-bg);
-        border-color: var(--tblr-btn-hover-border-color);
-        color: var(--tblr-btn-hover-color);
-    }
-    
-    .fc-button-primary:not(:disabled).fc-button-active {
-        background: var(--tblr-primary);
-        border-color: var(--tblr-primary);
-    }
-    
-    .fc-event {
-        border: none !important;
-        border-radius: 3px !important;
-        padding: 1px 4px !important;
-        font-size: 0.75rem !important;
-    }
-    
-    .fc-event-title {
-        font-weight: 500;
-    }
-    
-    .fc-daygrid-day-number {
-        color: var(--tblr-body-color);
-        text-decoration: none;
-        font-size: 0.875rem;
-    }
-    
-    .fc-col-header-cell {
-        background: var(--tblr-bg-surface);
-        font-size: 0.8125rem;
-    }
-    
-    .fc-daygrid-event-harness {
-        margin-bottom: 1px;
-    }
-</style>
+<!-- CSS específico del dashboard -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
 
-<script>
-let dashboardCalendar;
-
-document.addEventListener('DOMContentLoaded', function() {
-    initializeDashboardCalendar();
-});
-
-function initializeDashboardCalendar() {
-    const calendarEl = document.getElementById('dashboard-calendar');
-    if (!calendarEl) return;
-    
-    console.log('Inicializando calendario...');
-    
-    dashboardCalendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        locale: 'es',
-        height: 500,
-        headerToolbar: {
-            left: 'prev,next',
-            center: 'title',
-            right: ''
-        },
-        dayMaxEvents: 2,
-        moreLinkClick: 'popover',
-        eventDisplay: 'block',
-        events: {
-            url: '/api/calendar-events',
-            success: function(events) {
-                console.log('Eventos cargados:', events);
-                console.log('Número de eventos:', events.length);
-            },
-            failure: function(error) {
-                console.error('Error al cargar los eventos del calendario:', error);
-            }
-        },
-        eventDidMount: function(info) {
-            console.log('Evento montado:', info.event.title, info.event.start);
-            // Añadir tooltip
-            info.el.title = `${info.event.title}\n${info.event.extendedProps.user || ''}\n${info.event.extendedProps.department || ''}`;
-        },
-        eventClick: function(info) {
-            showQuickEventDetails(info.event);
-        }
-    });
-    
-    dashboardCalendar.render();
-    console.log('Calendario renderizado');
-}
-
-function showQuickEventDetails(event) {
-    const startDate = event.start.toLocaleDateString('es-ES');
-    const endDate = event.end ? new Date(event.end.getTime() - 24*60*60*1000).toLocaleDateString('es-ES') : startDate;
-    
-    // Mostrar detalles en un tooltip o alert simple
-    let details = `${event.title}\n`;
-    details += `Fechas: ${startDate} - ${endDate}\n`;
-    if (event.extendedProps.user) details += `Empleado: ${event.extendedProps.user}\n`;
-    if (event.extendedProps.department) details += `Departamento: ${event.extendedProps.department}`;
-    
-    alert(details);
-}
-</script>
+<!-- JS específico del dashboard -->
+<script src="{{ url_for('static', filename='js/dashboard-calendar.js') }}"></script>
+{% if not is_admin %}
+<script src="{{ url_for('static', filename='js/dashboard-employee.js') }}"></script>
+{% endif %}
 {% endblock %}

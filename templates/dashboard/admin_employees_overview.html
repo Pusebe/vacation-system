@@ -1,0 +1,108 @@
+<!-- Vista de empleados y sus días pendientes (Admin) -->
+<div class="col-12">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Resumen de Empleados</h3>
+            <div class="card-subtitle">Días disponibles y festivos por recuperar</div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-vcenter card-table">
+                    <thead>
+                        <tr>
+                            <th>Empleado</th>
+                            <th>Departamento</th>
+                            <th class="text-center">Vacaciones Disponibles</th>
+                            <th class="text-center">Festivos por Recuperar</th>
+                            <th class="text-center">Total Pendiente</th>
+                            <th class="text-center">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for employee_data in employees_summary %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <span class="avatar avatar-sm me-3">{{ employee_data.employee.name[0] }}</span>
+                                        <div>
+                                            <div class="font-weight-medium">{{ employee_data.employee.name }}</div>
+                                            <div class="text-muted">{{ employee_data.employee.email }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-azure-lt">{{ employee_data.employee.department.name }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-flex align-items-center justify-content-center">
+                                        <i class="ti ti-beach me-1 text-primary"></i>
+                                        <span class="font-weight-medium">{{ employee_data.vacation_days_available }}</span>
+                                        {% if employee_data.vacation_days_available > 0 %}
+                                            <small class="text-muted ms-1">días</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-flex align-items-center justify-content-center">
+                                        <i class="ti ti-calendar-event me-1 text-warning"></i>
+                                        <span class="font-weight-medium">{{ employee_data.holidays_to_recover }}</span>
+                                        {% if employee_data.holidays_to_recover > 0 %}
+                                            <small class="text-muted ms-1">días</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    {% set total_pending = employee_data.vacation_days_available + employee_data.holidays_to_recover %}
+                                    <span class="badge bg-{{ 'success' if total_pending == 0 else 'warning' if total_pending < 10 else 'danger' }}">
+                                        {{ total_pending }} días
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    {% if employee_data.is_on_vacation %}
+                                        <span class="badge bg-success">
+                                            <i class="ti ti-beach me-1"></i>De vacaciones
+                                        </span>
+                                    {% elif employee_data.has_pending_requests %}
+                                        <span class="badge bg-warning">
+                                            <i class="ti ti-clock me-1"></i>Solicitud pendiente
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="ti ti-briefcase me-1"></i>Trabajando
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer">
+            <div class="d-flex align-items-center">
+                <div class="text-muted">
+                    Mostrando {{ employees_summary|length }} empleados. 
+                    {% set total_vacation_days = employees_summary|sum(attribute='vacation_days_available') %}
+                    {% set total_holiday_days = employees_summary|sum(attribute='holidays_to_recover') %}
+                    Total: {{ total_vacation_days }} días de vacaciones, {{ total_holiday_days }} festivos por recuperar.
+                </div>
+                <div class="ms-auto">
+                    <div class="d-flex gap-3">
+                        <span class="d-flex align-items-center">
+                            <span class="badge bg-success me-1"></span>
+                            <small>Al día</small>
+                        </span>
+                        <span class="d-flex align-items-center">
+                            <span class="badge bg-warning me-1"></span>
+                            <small>Pocos días</small>
+                        </span>
+                        <span class="d-flex align-items-center">
+                            <span class="badge bg-danger me-1"></span>
+                            <small>Muchos días</small>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
