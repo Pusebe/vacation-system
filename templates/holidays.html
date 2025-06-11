@@ -1,0 +1,767 @@
+{% extends "base.html" %}
+
+{% block title %}Festivos Trabajados - Sistema de Vacaciones{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+    <div class="container-xl">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <h2 class="page-title">
+                    Festivos Trabajados
+                </h2>
+                <div class="text-muted">
+                    {% if is_admin %}
+                        Gestionar festivos trabajados por los empleados
+                    {% else %}
+                        Marcar festivos trabajados y solicitar recuperaciones
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-auto ms-auto d-print-none">
+                {% if is_admin %}
+                    <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#adminCreateHolidayModal">
+                        <i class="ti ti-plus me-2"></i>
+                        Marcar Festivo para Empleado
+                    </button>
+                {% endif %}
+                {% if not is_admin %}
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newHolidayModal">
+                        <i class="ti ti-plus me-2"></i>
+                        Marcar Festivo
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-body">
+    <div class="container-xl">
+        {% if is_admin %}
+            <!-- Vista de Administrador -->
+            <div class="row row-deck row-cards">
+                <!-- Festivos pendientes de aprobación -->
+                {% if pending_holidays %}
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Festivos Pendientes de Aprobación</h3>
+                                <span class="badge bg-warning ms-auto">{{ pending_holidays|length }}</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-vcenter card-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Empleado</th>
+                                                <th>Fecha Festivo</th>
+                                                <th>Descripción</th>
+                                                <th>Fecha Marcado</th>
+                                                <th class="w-1">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for holiday in pending_holidays %}
+                                                <tr>
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            <span class="avatar avatar-sm me-3">{{ holiday.user.name[0] }}</span>
+                                                            <div>
+                                                                <div class="font-weight-medium">{{ holiday.user.name }}</div>
+                                                                <div class="text-muted">{{ holiday.user.department.name }}</div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="font-weight-medium">{{ holiday.date.strftime('%d/%m/%y') }}</div>
+                                                        <div class="text-muted small">
+                                                            {% set day_name = holiday.date.strftime('%A') %}
+                                                            {% if day_name == 'Monday' %}Lunes
+                                                            {% elif day_name == 'Tuesday' %}Martes  
+                                                            {% elif day_name == 'Wednesday' %}Miércoles
+                                                            {% elif day_name == 'Thursday' %}Jueves
+                                                            {% elif day_name == 'Friday' %}Viernes
+                                                            {% elif day_name == 'Saturday' %}Sábado
+                                                            {% elif day_name == 'Sunday' %}Domingo
+                                                            {% endif %}
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="text-truncate" style="max-width: 200px;">
+                                                            {{ holiday.description or 'Sin descripción' }}
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        {{ holiday.created_at.strftime('%d/%m/%y') }}
+                                                    </td>
+                                                    <td>
+                                                        <div class="btn-list flex-nowrap">
+                                                            <button type="button" class="btn btn-success btn-sm" onclick="approveHoliday({{ holiday.id }})">
+                                                                <i class="ti ti-check"></i>
+                                                            </button>
+                                                            <button type="button" class="btn btn-danger btn-sm" onclick="showRejectHolidayModal({{ holiday.id }}, '{{ holiday.user.name }}', '{{ holiday.date|date }}')">
+                                                                <i class="ti ti-x"></i>
+                                                            </button>
+                                                            <button type="button" class="btn btn-warning btn-sm" onclick="showEditHolidayModal({{ holiday.id }}, '{{ holiday.date }}', '{{ holiday.description or '' }}', '{{ holiday.status }}')">
+                                                                <i class="ti ti-edit"></i>
+                                                            </button>
+                                                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteHoliday({{ holiday.id }}, '{{ holiday.user.name }}', '{{ holiday.date|date }}')">
+                                                                <i class="ti ti-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <!-- Todos los festivos (histórico) -->
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Histórico de Festivos Trabajados</h3>
+                        </div>
+                        <div class="card-body p-0">
+                            {% set historical_holidays = all_holidays | selectattr('status', 'in', ['approved', 'rejected']) | list %}
+                            <div class="table-responsive">
+                                <table class="table table-vcenter card-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Empleado</th>
+                                            <th>Día trabajado</th>
+                                            <th>Descripción</th>
+                                            <th>Estado</th>
+                                            <th>Aprobado por</th>
+                                            <th>Fecha aprobación</th>
+                                            <th class="w-1">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for holiday in historical_holidays %}
+                                            <tr>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <span class="avatar avatar-sm me-3">{{ holiday.user.name[0] }}</span>
+                                                        <div>
+                                                            <div class="font-weight-medium">{{ holiday.user.name }}</div>
+                                                            <div class="text-muted">{{ holiday.user.department.name }}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="font-weight-medium">{{ holiday.date.strftime('%d/%m/%y') }}</div>
+                                                </td>
+                                                <td>
+                                                    <div class="text-truncate" style="max-width: 200px;">
+                                                        {{ holiday.description or 'Sin descripción' }}
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span class="{{ holiday.get_status_class() }}">{{ holiday.get_status_text() }}</span>
+                                                </td>
+                                                <td>
+                                                    {% if holiday.approver %}
+                                                        {{ holiday.approver.name }}
+                                                    {% else %}
+                                                        <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if holiday.approved_at %}
+                                                        {{ holiday.approved_at.strftime('%d/%m/%y') }}
+                                                    {% else %}
+                                                        <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <div class="btn-list flex-nowrap">
+                                                        <!-- APROBADOS/RECHAZADOS: Solo Editar y Eliminar -->
+                                                        <button type="button" class="btn btn-warning btn-sm" onclick="showEditHolidayModal({{ holiday.id }}, '{{ holiday.date }}', '{{ holiday.description or '' }}', '{{ holiday.status }}')">
+                                                            <i class="ti ti-edit"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteHoliday({{ holiday.id }}, '{{ holiday.user.name }}', '{{ holiday.date.strftime('%d/%m/%y') }}')">
+                                                            <i class="ti ti-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        {% else %}
+            <!-- Vista de Empleado -->
+            <div class="row row-deck row-cards">
+                <!-- Información sobre festivos -->
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <div class="d-flex">
+                            <div>
+                                <i class="ti ti-info-circle me-2"></i>
+                            </div>
+                            <div>
+                                <h4 class="alert-title">Festivos Trabajados</h4>
+                                <div class="text-muted">
+                                    Marca los festivos que hayas trabajado. Una vez aprobados por tu supervisor, podrás solicitar días de recuperación.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Festivos aprobados disponibles para recuperación -->
+                {% if approved_holidays %}
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Festivos Disponibles para Recuperación</h3>
+                                <span class="badge bg-success ms-auto">{{ approved_holidays|length }}</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-vcenter card-table">
+                                        <thead>
+                                            <tr>
+                                                <th class="w-1">Acción</th>
+                                                <th>Estado</th>
+                                                <th>Día trabajado</th>
+                                                <th>Descripción</th>
+                                                <th>Fecha aprobación</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for holiday in approved_holidays %}
+                                                <tr>
+                                                    <td>
+                                                        {% set recovery_status, recovery_request = holiday.get_recovery_status() %}
+                                                        {% if recovery_status == 'approved' %}
+                                                            <button type="button" class="btn btn-success btn-sm" disabled>
+                                                                <i class="ti ti-check me-1"></i>
+                                                                Completada
+                                                            </button>
+                                                        {% elif recovery_status == 'pending' %}
+                                                            <button type="button" class="btn btn-outline-warning btn-sm" disabled>
+                                                                En espera
+                                                            </button>
+                                                        {% else %}
+                                                            <!-- rejected o sin solicitud -->
+                                                            <button type="button" class="btn btn-warning btn-sm" 
+                                                                    onclick="showRecoveryModal({{ holiday.id }}, '{{ holiday.date.strftime('%d/%m/%y') }}', '{{ holiday.description or 'Sin descripción' }}')">
+                                                                Pedir día
+                                                            </button>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        {% set recovery_status, recovery_request = holiday.get_recovery_status() %}
+                                                        {% if recovery_status %}
+                                                            <span class="badge bg-{{ 'warning' if recovery_status == 'pending' else 'success' if recovery_status == 'approved' else 'danger' }}">
+                                                                {{ 'Pendiente' if recovery_status == 'pending' else 'Aprobada' if recovery_status == 'approved' else 'Rechazada' }}
+                                                            </span>
+                                                        {% else %}
+                                                            <span class="badge bg-secondary">Disponible</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        <div class="font-weight-medium">{{ holiday.date.strftime('%d/%m/%y') }}</div>
+                                                    </td>
+                                                    <td>
+                                                        {{ holiday.description or 'Sin descripción' }}
+                                                    </td>
+                                                    <td>
+                                                        {{ holiday.approved_at.strftime('%d/%m/%y') if holiday.approved_at else '-' }}
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <!-- Mis festivos trabajados (pendientes y rechazados) -->
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Mis Festivos Trabajados</h3>
+                        </div>
+                        <div class="card-body p-0">
+                            {% set pending_and_rejected = my_holidays | selectattr('status', 'in', ['pending', 'rejected']) | list %}
+                            {% if pending_and_rejected %}
+                                <div class="table-responsive">
+                                    <table class="table table-vcenter card-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Día trabajado</th>
+                                                <th>Estado</th>
+                                                <th>Descripción</th>
+                                                <th class="w-1">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for holiday in pending_and_rejected %}
+                                                <tr>
+                                                    <td>
+                                                        <div class="font-weight-medium">{{ holiday.date.strftime('%d/%m/%y') }}</div>
+                                                    </td>
+                                                    <td>
+                                                        <span class="{{ holiday.get_status_class() }}">{{ holiday.get_status_text() }}</span>
+                                                        {% if holiday.status == 'rejected' %}
+                                                            <br><small class="text-danger">
+                                                                {% if 'Motivo del rechazo:' in (holiday.description or '') %}
+                                                                    {{ holiday.description.split('Motivo del rechazo:')[1].strip() }}
+                                                                {% else %}
+                                                                    Sin motivo especificado
+                                                                {% endif %}
+                                                            </small>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        {% if holiday.status == 'rejected' and 'Motivo del rechazo:' in (holiday.description or '') %}
+                                                            {{ holiday.description.split('Motivo del rechazo:')[0].strip() or 'Sin descripción' }}
+                                                        {% else %}
+                                                            {{ holiday.description or 'Sin descripción' }}
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        {% if holiday.can_be_cancelled() %}
+                                                            <form method="POST" action="{{ url_for('holidays.cancel', holiday_id=holiday.id) }}" style="display: inline;">
+                                                                <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('¿Cancelar este festivo?')">
+                                                                    <i class="ti ti-trash"></i>
+                                                                </button>
+                                                            </form>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="text-center text-muted py-5">
+                                    <i class="ti ti-calendar-event mb-3" style="font-size: 3rem;"></i>
+                                    <div class="h4">No tienes festivos trabajados pendientes o rechazados</div>
+                                    <div>Los festivos aprobados aparecen arriba para solicitar recuperación</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal para marcar nuevo festivo (empleados) -->
+{% if not is_admin %}
+    <div class="modal modal-blur fade" id="newHolidayModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Marcar Festivo Trabajado</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="{{ url_for('holidays.create') }}">
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Fecha del festivo trabajado</label>
+                                <input type="date" name="date" class="form-control" required max="{{ moment().format('YYYY-MM-DD') if moment else '' }}">
+                                <div class="form-hint">Selecciona la fecha en la que trabajaste en un día festivo</div>
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Descripción del festivo</label>
+                                <select name="description" class="form-select" onchange="toggleCustomDescription()">
+                                    <option value="">Seleccionar festivo...</option>
+                                    {% for holiday_desc in common_holidays %}
+                                        <option value="{{ holiday_desc }}">{{ holiday_desc }}</option>
+                                    {% endfor %}
+                                    <option value="custom">Otro (especificar)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-12 mb-3 d-none" id="customDescriptionDiv">
+                                <label class="form-label">Descripción personalizada</label>
+                                <input type="text" name="custom_description" class="form-control" placeholder="Describe el festivo trabajado...">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Marcar Festivo</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para solicitar recuperación (MEJORADO: solo 1 día) -->
+    <div class="modal modal-blur fade" id="recoveryModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Solicitar Recuperación</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="" id="recoveryForm">
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <div class="d-flex">
+                                <div>
+                                    <i class="ti ti-info-circle me-2"></i>
+                                </div>
+                                <div>
+                                    <strong>Festivo trabajado:</strong> <span id="recoveryHolidayInfo"></span><br>
+                                    <small class="text-muted">La recuperación será de <strong>1 día</strong></small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Fecha de recuperación</label>
+                                <input type="date" name="recovery_date" class="form-control" required min="{{ (moment().format('YYYY-MM-DD')) if moment else '' }}">
+                                <div class="form-hint">Selecciona el día que quieres tomar como recuperación</div>
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Motivo adicional (opcional)</label>
+                                <textarea name="reason" class="form-control" rows="3" placeholder="Explica por qué necesitas esta fecha específica..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-warning">Solicitar Recuperación</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<!-- Modal para admin crear festivo trabajado -->
+{% if is_admin %}
+    <div class="modal modal-blur fade" id="adminCreateHolidayModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Marcar Festivo Trabajado para Empleado</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="{{ url_for('holidays.create') }}">
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <i class="ti ti-info-circle me-2"></i>
+                            Como administrador, puedes marcar festivos trabajados directamente aprobados para cualquier empleado.
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Empleado</label>
+                                <select name="user_id" class="form-select" required>
+                                    <option value="">Seleccionar empleado</option>
+                                    {% for dept in departments %}
+                                        <optgroup label="{{ dept.name }}">
+                                            {% for emp in dept.get_employees() %}
+                                                <option value="{{ emp.id }}">{{ emp.name }}</option>
+                                            {% endfor %}
+                                        </optgroup>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Fecha del festivo trabajado</label>
+                                <input type="date" name="date" class="form-control" required>
+                                <div class="form-hint">Fecha en la que el empleado trabajó en un día festivo</div>
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Descripción del festivo</label>
+                                <select name="description" class="form-select" onchange="toggleAdminCustomDescription()">
+                                    <option value="">Seleccionar festivo...</option>
+                                    {% for holiday_desc in common_holidays %}
+                                        <option value="{{ holiday_desc }}">{{ holiday_desc }}</option>
+                                    {% endfor %}
+                                    <option value="custom">Otro (especificar)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-12 mb-3 d-none" id="adminCustomDescriptionDiv">
+                                <label class="form-label">Descripción personalizada</label>
+                                <input type="text" name="custom_description" class="form-control" placeholder="Describe el festivo trabajado...">
+                            </div>
+                            
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="auto_approve" value="1" checked>
+                                    <label class="form-check-label">
+                                        Aprobar automáticamente
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success">Marcar y Aprobar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<!-- Modal para editar festivo (solo admin) -->
+{% if is_admin %}
+    <div class="modal modal-blur fade" id="editHolidayModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Festivo Trabajado</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="" id="editHolidayForm">
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Fecha del festivo</label>
+                                <input type="date" name="date" class="form-control" required id="editHolidayDate">
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Descripción</label>
+                                <input type="text" name="description" class="form-control" id="editHolidayDescription" placeholder="Descripción del festivo...">
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Estado</label>
+                                <select name="status" class="form-select" id="editHolidayStatus">
+                                    <option value="pending">Pendiente</option>
+                                    <option value="approved">Aprobado</option>
+                                    <option value="rejected">Rechazado</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-warning">Guardar Cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<!-- Modal para rechazar festivo (solo admin) -->
+{% if is_admin %}
+    <div class="modal modal-blur fade" id="rejectHolidayModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Rechazar Festivo Trabajado</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="" id="rejectHolidayForm">
+                    <div class="modal-body">
+                        <p>¿Estás seguro de que quieres rechazar el festivo trabajado de <strong id="rejectHolidayUserName"></strong> del <strong id="rejectHolidayDate"></strong>?</p>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Motivo del rechazo (opcional)</label>
+                            <textarea name="reason" class="form-control" rows="3" placeholder="Explica por qué se rechaza este festivo..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-danger">Rechazar Festivo</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+{% if not is_admin %}
+function toggleCustomDescription() {
+    const select = document.querySelector('select[name="description"]');
+    const customDiv = document.getElementById('customDescriptionDiv');
+    
+    if (select.value === 'custom') {
+        customDiv.classList.remove('d-none');
+        customDiv.querySelector('input').required = true;
+    } else {
+        customDiv.classList.add('d-none');
+        customDiv.querySelector('input').required = false;
+    }
+}
+
+function showRecoveryModal(holidayId, holidayDate, holidayDescription) {
+    document.getElementById('recoveryHolidayInfo').textContent = `${holidayDate} - ${holidayDescription}`;
+    document.getElementById('recoveryForm').action = `/holidays/${holidayId}/create-recovery`;
+    
+    // Limpiar el formulario
+    document.querySelector('input[name="recovery_date"]').value = '';
+    document.querySelector('textarea[name="reason"]').value = '';
+    
+    // Establecer fecha mínima como mañana
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    document.querySelector('input[name="recovery_date"]').min = tomorrow.toISOString().split('T')[0];
+    
+    new bootstrap.Modal(document.getElementById('recoveryModal')).show();
+}
+
+// Ajustar la descripción al enviar el formulario
+document.querySelector('#newHolidayModal form').addEventListener('submit', function(e) {
+    const select = document.querySelector('select[name="description"]');
+    const customInput = document.querySelector('input[name="custom_description"]');
+    
+    if (select.value === 'custom' && customInput.value.trim()) {
+        // Crear un input hidden con la descripción personalizada
+        const hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = 'description';
+        hiddenInput.value = customInput.value.trim();
+        this.appendChild(hiddenInput);
+        
+        // Deshabilitar el select para que no envíe 'custom'
+        select.disabled = true;
+    }
+});
+
+// Validar fecha de recuperación
+document.querySelector('input[name="recovery_date"]').addEventListener('change', function() {
+    const selectedDate = new Date(this.value);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (selectedDate <= today) {
+        alert('La fecha de recuperación debe ser futura.');
+        this.value = '';
+        return;
+    }
+});
+
+{% else %}
+function approveHoliday(holidayId) {
+    if (confirm('¿Aprobar este festivo trabajado?')) {
+        fetch(`/holidays/${holidayId}/approve`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }
+        }).then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Error al aprobar el festivo');
+            }
+        });
+    }
+}
+
+function showEditHolidayModal(holidayId, date, description, status) {
+    document.getElementById('editHolidayForm').action = `/holidays/${holidayId}/edit`;
+    document.getElementById('editHolidayDate').value = date;
+    document.getElementById('editHolidayDescription').value = description;
+    document.getElementById('editHolidayStatus').value = status;
+    new bootstrap.Modal(document.getElementById('editHolidayModal')).show();
+}
+
+function deleteHoliday(holidayId, userName, holidayDate) {
+    if (confirm(`¿Eliminar el festivo trabajado de ${userName} del ${holidayDate}? Esta acción no se puede deshacer.`)) {
+        fetch(`/holidays/${holidayId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }
+        }).then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Error al eliminar el festivo');
+            }
+        });
+    }
+}
+
+function showRejectHolidayModal(holidayId, userName, holidayDate) {
+    document.getElementById('rejectHolidayUserName').textContent = userName;
+    document.getElementById('rejectHolidayDate').textContent = holidayDate;
+    document.getElementById('rejectHolidayForm').action = `/holidays/${holidayId}/reject`;
+    new bootstrap.Modal(document.getElementById('rejectHolidayModal')).show();
+}
+
+function toggleAdminCustomDescription() {
+    const select = document.querySelector('#adminCreateHolidayModal select[name="description"]');
+    const customDiv = document.getElementById('adminCustomDescriptionDiv');
+    
+    if (select.value === 'custom') {
+        customDiv.classList.remove('d-none');
+        customDiv.querySelector('input').required = true;
+    } else {
+        customDiv.classList.add('d-none');
+        customDiv.querySelector('input').required = false;
+    }
+}
+
+// Ajustar la descripción al enviar el formulario del admin
+document.addEventListener('DOMContentLoaded', function() {
+    const adminForm = document.querySelector('#adminCreateHolidayModal form');
+    if (adminForm) {
+        adminForm.addEventListener('submit', function(e) {
+            const select = this.querySelector('select[name="description"]');
+            const customInput = this.querySelector('input[name="custom_description"]');
+            
+            if (select.value === 'custom' && customInput.value.trim()) {
+                // Crear un input hidden con la descripción personalizada
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'description';
+                hiddenInput.value = customInput.value.trim();
+                this.appendChild(hiddenInput);
+                
+                // Deshabilitar el select para que no envíe 'custom'
+                select.disabled = true;
+            }
+        });
+    }
+});
+{% endif %}
+
+// Función global para mostrar tooltips informativos
+document.addEventListener('DOMContentLoaded', function() {
+    // Agregar tooltips a los botones deshabilitados
+    const disabledButtons = document.querySelectorAll('button[disabled]');
+    disabledButtons.forEach(button => {
+        if (button.textContent.includes('Ya Solicitada')) {
+            button.title = 'Ya tienes una solicitud de recuperación para este festivo';
+        }
+    });
+    
+    // Mejorar la experiencia de usuario con alertas informativas
+    const recoveryButtons = document.querySelectorAll('button[onclick*="showRecoveryModal"]');
+    recoveryButtons.forEach(button => {
+        button.title = 'Solicitar 1 día de recuperación por este festivo trabajado';
+    });
+});
+</script>
+{% endblock %}

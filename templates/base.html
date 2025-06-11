@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <title>{% block title %}Sistema de Vacaciones{% endblock %}</title>
+    <!-- CSS files -->
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/css/tabler.min.css" rel="stylesheet"/>
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet"/>
+    
+    <style>
+        .badge-notification {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            font-size: 0.625rem;
+            min-width: 16px;
+            height: 16px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            border: 2px solid var(--tblr-body-bg);
+        }
+        
+        .notification-dropdown {
+            width: min(380px, 90vw);
+            max-height: 70vh;
+            border: 1px solid var(--tblr-border-color);
+            box-shadow: var(--tblr-box-shadow-dropdown);
+            border-radius: var(--tblr-border-radius);
+        }
+        
+        .notification-header {
+            background: var(--tblr-bg-surface);
+            border-bottom: 1px solid var(--tblr-border-color);
+            padding: 0.75rem 1rem;
+        }
+        
+        .notification-title {
+            margin: 0;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--tblr-body-color);
+        }
+        
+        .notification-actions {
+            display: flex;
+            gap: 0.25rem;
+        }
+        
+        .btn-notification {
+            background: transparent;
+            border: none;
+            border-radius: var(--tblr-border-radius-sm);
+            padding: 0.375rem;
+            color: var(--tblr-muted);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-notification:hover {
+            background: var(--tblr-hover-bg);
+            color: var(--tblr-body-color);
+        }
+        
+        .notification-container {
+            max-height: calc(70vh - 100px);
+            overflow-y: auto;
+            background: var(--tblr-body-bg);
+        }
+        
+        .notification-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .notification-container::-webkit-scrollbar-track {
+            background: var(--tblr-bg-surface);
+        }
+        
+        .notification-container::-webkit-scrollbar-thumb {
+            background: var(--tblr-border-color);
+            border-radius: 3px;
+        }
+        
+        .notification-item {
+            padding: 0.875rem 1rem;
+            border-bottom: 1px solid var(--tblr-border-color-light);
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            position: relative;
+            background: var(--tblr-body-bg);
+        }
+        
+        .notification-item:hover {
+            background: var(--tblr-hover-bg);
+        }
+        
+        .notification-item.unread {
+            background: var(--tblr-primary-lt);
+            border-left: 3px solid var(--tblr-primary);
+        }
+        
+        .notification-item.unread::after {
+            content: '';
+            position: absolute;
+            right: 0.875rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 6px;
+            height: 6px;
+            background: var(--tblr-primary);
+            border-radius: 50%;
+        }
+        
+        .notification-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: var(--tblr-border-radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+            margin-right: 0.75rem;
+            flex-shrink: 0;
+        }
+        
+        .notification-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .notification-title-text {
+            font-weight: 500;
+            color: var(--tblr-body-color);
+            margin-bottom: 0.125rem;
+            line-height: 1.4;
+            font-size: 0.875rem;
+        }
+        
+        .notification-message {
+            color: var(--tblr-muted);
+            font-size: 0.8125rem;
+            line-height: 1.4;
+            margin-bottom: 0.25rem;
+        }
+        
+        .notification-time {
+            color: var(--tblr-muted);
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .notification-footer {
+            background: var(--tblr-bg-surface);
+            padding: 0.5rem 1rem;
+            text-align: center;
+            border-top: 1px solid var(--tblr-border-color-light);
+        }
+        
+        .notification-loading, .notification-empty, .notification-error {
+            padding: 2rem 1rem;
+            text-align: center;
+            color: var(--tblr-muted);
+        }
+        
+        .notification-empty-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.875rem;
+            opacity: 0.5;
+            color: var(--tblr-muted);
+        }
+        
+        /* Colores de avatar según tipo - usando variables de Tabler */
+        .notification-type-success { 
+            background: var(--tblr-success-lt); 
+            color: var(--tblr-success); 
+        }
+        .notification-type-warning { 
+            background: var(--tblr-warning-lt); 
+            color: var(--tblr-warning); 
+        }
+        .notification-type-danger { 
+            background: var(--tblr-danger-lt); 
+            color: var(--tblr-danger); 
+        }
+        .notification-type-info { 
+            background: var(--tblr-info-lt); 
+            color: var(--tblr-info); 
+        }
+        .notification-type-primary { 
+            background: var(--tblr-primary-lt); 
+            color: var(--tblr-primary); 
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <!-- Navbar -->
+        <header class="navbar navbar-expand-md navbar-light d-print-none">
+            <div class="container-xl">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-menu">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <h1 class="navbar-brand navbar-brand-autodark d-none-navbar-horizontal pe-0 pe-md-3">
+                    <a href="{{ url_for('dashboard.index') }}">
+                        <i class="ti ti-calendar-event me-2"></i>
+                        {{ config.APP_NAME }}
+                    </a>
+                </h1>
+                
+                <div class="navbar-nav flex-row order-md-last">
+                    <!-- Notificaciones -->
+                    <div class="nav-item dropdown">
+                        <a href="#" class="nav-link d-flex lh-1 text-reset p-0 position-relative" data-bs-toggle="dropdown" onclick="loadNotificationsList()">
+                            <i class="ti ti-bell fs-4"></i>
+                            <span id="notification-badge" class="badge bg-red badge-notification d-none">0</span>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow notification-dropdown p-0">
+                            <!-- Header -->
+                            <div class="notification-header">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <h6 class="notification-title">Notificaciones</h6>
+                                    <div class="notification-actions">
+                                        <button class="btn-notification" onclick="markAllAsRead()" id="markAllBtn" title="Marcar todas como leídas">
+                                            <i class="ti ti-checks"></i>
+                                        </button>
+                                        <button class="btn-notification" onclick="refreshNotifications()" title="Actualizar">
+                                            <i class="ti ti-refresh"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Lista de notificaciones -->
+                            <div id="notifications-container" class="notification-container">
+                                <div class="notification-loading">
+                                    <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                                    <span class="text-muted">Cargando notificaciones...</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Footer -->
+                            <div class="notification-footer">
+                                <small class="text-muted">
+                                    Actualizado hace <span id="last-update">unos segundos</span>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Usuario -->
+                    <div class="nav-item dropdown">
+                        <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown">
+                            <span class="avatar avatar-sm bg-primary text-white">
+                                {{ get_current_user().name[0].upper() if get_current_user() else 'U' }}
+                            </span>
+                            <div class="d-none d-xl-block ps-2">
+                                <div>{{ get_current_user().name if get_current_user() }}</div>
+                                <div class="mt-1 small text-muted">{{ get_current_user().department.name if get_current_user() }}</div>
+                            </div>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+                            <div class="dropdown-header">
+                                <span>{{ get_current_user().email if get_current_user() }}</span>
+                                <span class="badge badge-outline text-blue ms-2">
+                                    {% if get_current_user() and get_current_user().is_admin() %}Admin{% else %}Empleado{% endif %}
+                                </span>
+                            </div>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
+                                <i class="ti ti-logout me-2"></i>
+                                Cerrar sesión
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Menu principal -->
+                <div class="collapse navbar-collapse" id="navbar-menu">
+                    <div class="d-flex flex-column flex-md-row flex-fill align-items-stretch align-items-md-center">
+                        <ul class="navbar-nav">
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('dashboard.index') }}">
+                                    <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                        <i class="ti ti-home"></i>
+                                    </span>
+                                    <span class="nav-link-title">Dashboard</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('requests.index') }}">
+                                    <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                        <i class="ti ti-calendar-plus"></i>
+                                    </span>
+                                    <span class="nav-link-title">Solicitudes</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('holidays.index') }}">
+                                    <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                        <i class="ti ti-calendar-event"></i>
+                                    </span>
+                                    <span class="nav-link-title">Festivos</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('calendar.index') }}">
+                                    <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                        <i class="ti ti-calendar"></i>
+                                    </span>
+                                    <span class="nav-link-title">Calendario</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Page wrapper -->
+        <div class="page-wrapper">
+            <!-- Flash messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="container-xl mt-3">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible" role="alert">
+                                {% if category == 'success' %}
+                                    <i class="ti ti-check me-2"></i>
+                                {% elif category == 'error' %}
+                                    <i class="ti ti-alert-circle me-2"></i>
+                                {% elif category == 'warning' %}
+                                    <i class="ti ti-alert-triangle me-2"></i>
+                                {% else %}
+                                    <i class="ti ti-info-circle me-2"></i>
+                                {% endif %}
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+            
+            <!-- Page content -->
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+    
+    <!-- JS files -->
+    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/js/tabler.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

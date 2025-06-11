@@ -1,0 +1,72 @@
+<!-- Modal para admin crear vacaciones directamente -->
+<div class="modal modal-blur fade" id="adminCreateRequestModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Crear Solicitud Directa</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('requests.create') }}">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="ti ti-info-circle me-2"></i>
+                        Como administrador, puedes crear solicitudes directamente aprobadas para cualquier empleado.
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Empleado</label>
+                            <select name="user_id" class="form-select" required>
+                                <option value="">Seleccionar empleado</option>
+                                {% for dept in departments %}
+                                    <optgroup label="{{ dept.name }}">
+                                        {% for emp in dept.get_employees() %}
+                                            <option value="{{ emp.id }}">{{ emp.name }}</option>
+                                        {% endfor %}
+                                    </optgroup>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Tipo de solicitud</label>
+                            <select name="type" class="form-select" required>
+                                <option value="">Seleccionar tipo</option>
+                                <option value="vacation">Vacaciones</option>
+                                <option value="recovery">Recuperación de festivo</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Fecha de inicio</label>
+                            <input type="date" name="start_date" class="form-control" required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Fecha de fin</label>
+                            <input type="date" name="end_date" class="form-control" required>
+                        </div>
+                        
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Motivo</label>
+                            <textarea name="reason" class="form-control" rows="3" placeholder="Motivo de la solicitud..." required></textarea>
+                        </div>
+                        
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="auto_approve" value="1" checked>
+                                <label class="form-check-label">
+                                    Aprobar automáticamente
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Crear y Aprobar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

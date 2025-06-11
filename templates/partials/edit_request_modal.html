@@ -1,0 +1,57 @@
+<!-- Modal para editar solicitud (solo admin) -->
+<div class="modal modal-blur fade" id="editRequestModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Solicitud</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="" id="editRequestForm">
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="ti ti-alert-triangle me-2"></i>
+                        Editando solicitud de <strong id="editRequestUser"></strong>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tipo de solicitud</label>
+                            <select name="type" class="form-select" required id="editRequestType">
+                                <option value="vacation">Vacaciones</option>
+                                <option value="recovery">Recuperación de festivo</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Estado</label>
+                            <select name="status" class="form-select" required id="editRequestStatus">
+                                <option value="pending">Pendiente</option>
+                                <option value="approved">Aprobada</option>
+                                <option value="rejected">Rechazada</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Fecha de inicio</label>
+                            <input type="date" name="start_date" class="form-control" required id="editRequestStartDate">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Fecha de fin</label>
+                            <input type="date" name="end_date" class="form-control" required id="editRequestEndDate">
+                        </div>
+                        
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Motivo</label>
+                            <textarea name="reason" class="form-control" rows="3" id="editRequestReason"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

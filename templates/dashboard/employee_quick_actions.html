@@ -1,0 +1,123 @@
+<!-- Acciones rápidas para empleados -->
+<div class="col-12">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Acciones Rápidas</h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <button type="button" class="btn btn-primary w-100 h-100" data-bs-toggle="modal" data-bs-target="#newVacationModal">
+                        <i class="ti ti-beach me-2"></i>
+                        <div>
+                            <strong>Pedir Vacaciones</strong>
+                            <br><small class="opacity-75">Solicitar días de descanso</small>
+                        </div>
+                    </button>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <button type="button" class="btn btn-info w-100 h-100" data-bs-toggle="modal" data-bs-target="#newHolidayModal">
+                        <i class="ti ti-calendar-event me-2"></i>
+                        <div>
+                            <strong>Marcar Festivos</strong>
+                            <br><small class="opacity-75">Registrar día festivo trabajado</small>
+                        </div>
+                    </button>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <a href="{{ url_for('holidays.index') }}" class="btn btn-warning w-100 h-100">
+                        <i class="ti ti-eye me-2"></i>
+                        <div>
+                            <strong>Ver Festivos</strong>
+                            <br><small class="opacity-75">Gestionar y pedir recuperaciones</small>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para pedir vacaciones (simplificado) -->
+<div class="modal modal-blur fade" id="newVacationModal" tabindex="-1" aria-labelledby="newVacationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newVacationModalLabel">Pedir Vacaciones</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('requests.create') }}">
+                <input type="hidden" name="type" value="vacation">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Fecha de inicio</label>
+                            <input type="date" name="start_date" class="form-control" required onchange="validateVacationDates()">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Fecha de fin</label>
+                            <input type="date" name="end_date" class="form-control" required onchange="validateVacationDates()">
+                        </div>
+                        
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Motivo (opcional)</label>
+                            <textarea name="reason" class="form-control" rows="3" placeholder="Describe el motivo de tus vacaciones..."></textarea>
+                        </div>
+                        
+                        <div class="col-12">
+                            <div id="vacation-validation-result" class="alert" style="display: none;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="submitVacationBtn" disabled>Solicitar Vacaciones</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para marcar festivos -->
+<div class="modal modal-blur fade" id="newHolidayModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Marcar Festivo Trabajado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('holidays.create') }}">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Fecha del festivo trabajado</label>
+                            <input type="date" name="date" class="form-control" required max="{{ moment().format('YYYY-MM-DD') if moment else '' }}">
+                            <div class="form-hint">Selecciona la fecha en la que trabajaste en un día festivo</div>
+                        </div>
+                        
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Descripción del festivo</label>
+                            <select name="description" class="form-select" onchange="toggleHolidayCustomDescription()">
+                                <option value="">Seleccionar festivo...</option>
+                                {% for holiday_desc in common_holidays %}
+                                    <option value="{{ holiday_desc }}">{{ holiday_desc }}</option>
+                                {% endfor %}
+                                <option value="custom">Otro (especificar)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-12 mb-3 d-none" id="holidayCustomDescriptionDiv">
+                            <label class="form-label">Descripción personalizada</label>
+                            <input type="text" name="custom_description" class="form-control" placeholder="Describe el festivo trabajado...">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-info">Marcar Festivo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

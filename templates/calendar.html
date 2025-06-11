@@ -1,0 +1,374 @@
+{% extends "base.html" %}
+
+{% block title %}Calendario de Vacaciones - Sistema de Vacaciones{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+    <div class="container-xl">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <h2 class="page-title">
+                    Calendario de Vacaciones
+                </h2>
+                <div class="text-muted">
+                    {% if is_admin %}
+                        Vista completa de todas las vacaciones y recuperaciones del equipo
+                    {% else %}
+                        Tus vacaciones y las de tu departamento
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-auto ms-auto d-print-none">
+                <div class="btn-list">
+                    <div class="d-none d-sm-inline">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="calendar.changeView('dayGridMonth')">
+                                <i class="ti ti-calendar me-1"></i>Mes
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="calendar.changeView('timeGridWeek')">
+                                <i class="ti ti-calendar-week me-1"></i>Semana
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="calendar.today()">
+                                <i class="ti ti-calendar-today me-1"></i>Hoy
+                            </button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newRequestModal">
+                        <i class="ti ti-plus me-2"></i>
+                        Nueva Solicitud
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-body">
+    <div class="container-xl">
+        <div class="row">
+            <!-- Leyenda -->
+            <div class="col-12 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h4 class="card-title">Leyenda</h4>
+                            </div>
+                            <div class="col-auto">
+                                <div class="row g-2 align-items-center">
+                                    {% if is_admin %}
+                                        <div class="col-auto">
+                                            <span class="legend-item">
+                                                <span class="badge bg-primary me-2"></span>
+                                                Vacaciones
+                                            </span>
+                                        </div>
+                                        <div class="col-auto">
+                                            <span class="legend-item">
+                                                <span class="badge bg-warning me-2"></span>
+                                                Recuperaciones
+                                            </span>
+                                        </div>
+                                        <div class="col-auto">
+                                            <span class="legend-item">
+                                                <span class="badge bg-secondary me-2"></span>
+                                                Pendientes
+                                            </span>
+                                        </div>
+                                    {% else %}
+                                        <div class="col-auto">
+                                            <span class="legend-item">
+                                                <span class="badge bg-success me-2"></span>
+                                                Mis vacaciones
+                                            </span>
+                                        </div>
+                                        <div class="col-auto">
+                                            <span class="legend-item">
+                                                <span class="badge bg-warning me-2"></span>
+                                                Mis recuperaciones
+                                            </span>
+                                        </div>
+                                        <div class="col-auto">
+                                            <span class="legend-item">
+                                                <span class="badge bg-info me-2"></span>
+                                                Compañeros
+                                            </span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Calendario -->
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div id="calendar"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Incluir modal de nueva solicitud -->
+{% include 'partials/request_modal.html' %}
+
+<!-- Modal de detalles del evento -->
+<div class="modal modal-blur fade" id="eventDetailsModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="eventTitle">Detalles de la Solicitud</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="eventDetails">
+                <!-- Se llena dinámicamente -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <div id="eventActions">
+                    <!-- Botones de acción se agregan dinámicamente -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- FullCalendar CSS y JS -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/es.global.min.js"></script>
+
+<style>
+    .fc {
+        font-family: inherit;
+    }
+    
+    .fc-toolbar-title {
+        font-size: 1.25rem !important;
+        font-weight: 600;
+    }
+    
+    .fc-button-group .fc-button {
+        background: var(--tblr-btn-bg);
+        border-color: var(--tblr-btn-border-color);
+        color: var(--tblr-btn-color);
+        font-size: 0.875rem;
+        padding: 0.375rem 0.75rem;
+    }
+    
+    .fc-button-group .fc-button:hover {
+        background: var(--tblr-btn-hover-bg);
+        border-color: var(--tblr-btn-hover-border-color);
+        color: var(--tblr-btn-hover-color);
+    }
+    
+    .fc-button-primary:not(:disabled).fc-button-active {
+        background: var(--tblr-primary);
+        border-color: var(--tblr-primary);
+    }
+    
+    .fc-event {
+        border: none !important;
+        border-radius: 4px !important;
+        padding: 2px 6px !important;
+        font-size: 0.8125rem !important;
+    }
+    
+    .fc-event-title {
+        font-weight: 500;
+    }
+    
+    .legend-item {
+        display: inline-flex;
+        align-items: center;
+        font-size: 0.875rem;
+        margin-right: 1rem;
+    }
+    
+    .fc-daygrid-day-number {
+        color: var(--tblr-body-color);
+        text-decoration: none;
+    }
+    
+    .fc-col-header-cell {
+        background: var(--tblr-bg-surface);
+    }
+</style>
+
+<script>
+let calendar;
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCalendar();
+});
+
+function initializeCalendar() {
+    const calendarEl = document.getElementById('calendar');
+    
+    calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'es',
+        height: 'auto',
+        headerToolbar: {
+            left: 'prev,next',
+            center: 'title',
+            right: ''
+        },
+        dayMaxEvents: 3,
+        moreLinkClick: 'popover',
+        eventDisplay: 'block',
+        events: {
+            url: '/api/calendar-events',
+            failure: function() {
+                alert('Error al cargar los eventos del calendario');
+            }
+        },
+        eventClick: function(info) {
+            showEventDetails(info.event);
+        },
+        dateClick: function(info) {
+            // Abrir modal de nueva solicitud con fecha preseleccionada
+            document.querySelector('input[name="start_date"]').value = info.dateStr;
+            document.querySelector('input[name="end_date"]').value = info.dateStr;
+            new bootstrap.Modal(document.getElementById('newRequestModal')).show();
+        },
+        eventDidMount: function(info) {
+            // Añadir tooltip
+            info.el.title = `${info.event.title}\n${info.event.extendedProps.user || ''}\n${info.event.extendedProps.department || ''}`;
+        }
+    });
+    
+    calendar.render();
+}
+
+function showEventDetails(event) {
+    const modal = document.getElementById('eventDetailsModal');
+    const title = document.getElementById('eventTitle');
+    const details = document.getElementById('eventDetails');
+    const actions = document.getElementById('eventActions');
+    
+    title.textContent = event.title;
+    
+    const startDate = event.start.toLocaleDateString('es-ES');
+    const endDate = event.end ? new Date(event.end.getTime() - 24*60*60*1000).toLocaleDateString('es-ES') : startDate;
+    
+    details.innerHTML = `
+        <div class="row">
+            <div class="col-sm-4"><strong>Fechas:</strong></div>
+            <div class="col-sm-8">${startDate} - ${endDate}</div>
+        </div>
+        ${event.extendedProps.user ? `
+        <div class="row mt-2">
+            <div class="col-sm-4"><strong>Empleado:</strong></div>
+            <div class="col-sm-8">${event.extendedProps.user}</div>
+        </div>
+        ` : ''}
+        ${event.extendedProps.department ? `
+        <div class="row mt-2">
+            <div class="col-sm-4"><strong>Departamento:</strong></div>
+            <div class="col-sm-8">${event.extendedProps.department}</div>
+        </div>
+        ` : ''}
+        <div class="row mt-2">
+            <div class="col-sm-4"><strong>Tipo:</strong></div>
+            <div class="col-sm-8">
+                <span class="badge" style="background-color: ${event.backgroundColor}">${event.extendedProps.type || 'Vacaciones'}</span>
+            </div>
+        </div>
+    `;
+    
+    // Limpiar acciones previas
+    actions.innerHTML = '';
+    
+    {% if is_admin %}
+    // Si es admin, mostrar botones de edición
+    if (event.extendedProps.requestId) {
+        actions.innerHTML = `
+            <button type="button" class="btn btn-warning btn-sm me-2" onclick="editEventRequest(${event.extendedProps.requestId})">
+                <i class="ti ti-edit me-1"></i>Editar
+            </button>
+            <button type="button" class="btn btn-danger btn-sm" onclick="deleteEventRequest(${event.extendedProps.requestId})">
+                <i class="ti ti-trash me-1"></i>Eliminar
+            </button>
+        `;
+    }
+    {% endif %}
+    
+    new bootstrap.Modal(modal).show();
+}
+
+{% if is_admin %}
+function editEventRequest(requestId) {
+    // Redirigir a la página de solicitudes con foco en editar
+    window.location.href = `/requests#edit-${requestId}`;
+}
+
+function deleteEventRequest(requestId) {
+    if (confirm('¿Estás seguro de que quieres eliminar esta solicitud?')) {
+        fetch(`/requests/${requestId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }
+        }).then(() => {
+            calendar.refetchEvents();
+            bootstrap.Modal.getInstance(document.getElementById('eventDetailsModal')).hide();
+        });
+    }
+}
+{% endif %}
+
+// Funciones para los controles del calendario
+function refreshCalendar() {
+    calendar.refetchEvents();
+}
+
+// Funciones para validación de fechas en el modal
+function validateDates() {
+    const startDate = document.querySelector('input[name="start_date"]').value;
+    const endDate = document.querySelector('input[name="end_date"]').value;
+    const type = document.querySelector('select[name="type"]').value;
+    const resultDiv = document.getElementById('validation-result');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    if (!startDate || !endDate || !type) {
+        resultDiv.style.display = 'none';
+        submitBtn.disabled = true;
+        return;
+    }
+    
+    fetch(`/api/validate-dates?start_date=${startDate}&end_date=${endDate}&type=${type}`)
+        .then(response => response.json())
+        .then(data => {
+            resultDiv.style.display = 'block';
+            if (data.available) {
+                resultDiv.className = 'alert alert-success';
+                resultDiv.innerHTML = `<i class="ti ti-check me-2"></i>${data.message}`;
+                submitBtn.disabled = false;
+            } else {
+                resultDiv.className = 'alert alert-danger';
+                resultDiv.innerHTML = `<i class="ti ti-x me-2"></i>${data.message}`;
+                submitBtn.disabled = true;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'alert alert-warning';
+            resultDiv.innerHTML = '<i class="ti ti-alert-triangle me-2"></i>Error al validar fechas';
+            submitBtn.disabled = true;
+        });
+}
+
+function toggleRequestType() {
+    validateDates();
+}
+</script>
+{% endblock %}

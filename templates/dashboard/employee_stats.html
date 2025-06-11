@@ -1,0 +1,122 @@
+<!-- Estadísticas del empleado -->
+<div class="col-12">
+    <div class="row row-cards">
+        <div class="col-sm-6 col-lg-3">
+            <div class="card card-sm">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <span class="bg-{{ 'success' if current_vacation else 'secondary' }} text-white avatar">
+                                <i class="ti ti-beach"></i>
+                            </span>
+                        </div>
+                        <div class="col">
+                            <div class="font-weight-medium">
+                                {% if current_vacation %}
+                                    De vacaciones
+                                {% else %}
+                                    Trabajando
+                                {% endif %}
+                            </div>
+                            <div class="text-muted">Estado actual</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-sm-6 col-lg-3">
+            <div class="card card-sm">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <span class="bg-primary text-white avatar">
+                                <i class="ti ti-calendar-stats"></i>
+                            </span>
+                        </div>
+                        <div class="col">
+                            <div class="font-weight-medium">{{ vacation_days_remaining }}</div>
+                            <div class="text-muted">Días de vacaciones restantes</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-sm-6 col-lg-3">
+            <div class="card card-sm">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <span class="bg-warning text-white avatar">
+                                <i class="ti ti-calendar-event"></i>
+                            </span>
+                        </div>
+                        <div class="col">
+                            <div class="font-weight-medium">{{ recovery_days_available }}</div>
+                            <div class="text-muted">Días de recuperación disponibles</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-sm-6 col-lg-3">
+            <div class="card card-sm">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <span class="bg-info text-white avatar">
+                                <i class="ti ti-users"></i>
+                            </span>
+                        </div>
+                        <div class="col">
+                            <div class="font-weight-medium">{{ dept_vacations|length }}</div>
+                            <div class="text-muted">Compañeros de vacaciones</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Información actual destacada -->
+{% if current_vacation %}
+    <div class="col-12">
+        <div class="alert alert-success">
+            <div class="d-flex">
+                <div>
+                    <i class="ti ti-beach me-2"></i>
+                </div>
+                <div>
+                    <h4 class="alert-title">¡Estás de vacaciones!</h4>
+                    <div class="text-muted">
+                        Vacaciones del {{ current_vacation.start_date.strftime('%d/%m/%y') }} al {{ current_vacation.end_date.strftime('%d/%m/%y') }}.
+                        {% if current_vacation.reason %}
+                            Motivo: {{ current_vacation.reason }}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+{% if next_vacation %}
+    <div class="col-12">
+        <div class="alert alert-info">
+            <div class="d-flex">
+                <div>
+                    <i class="ti ti-calendar-plus me-2"></i>
+                </div>
+                <div>
+                    <h4 class="alert-title">Próximas vacaciones</h4>
+                    <div class="text-muted">
+                        Del {{ next_vacation.start_date.strftime('%d/%m/%y') }} al {{ next_vacation.end_date.strftime('%d/%m/%y') }}.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}

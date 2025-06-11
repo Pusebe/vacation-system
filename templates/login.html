@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <title>Iniciar Sesión - Sistema de Vacaciones</title>
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/css/tabler.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.28.1/tabler-icons.min.css" integrity="sha512-UuL1Le1IzormILxFr3ki91VGuPYjsKQkRFUvSrEuwdVCvYt6a1X73cJ8sWb/1E726+rfDRexUn528XRdqrSAOw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body class="d-flex flex-column">
+    <div class="page page-center">
+        <div class="container container-tight py-4">
+            <div class="text-center mb-4">
+                <a href="#" class="navbar-brand navbar-brand-autodark">
+                    <i class="ti ti-calendar-event me-2 text-primary" style="font-size: 2rem;"></i>
+                    <h1 class="d-inline">Sistema de Vacaciones</h1>
+                </a>
+            </div>
+            
+            <!-- Flash messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible" role="alert">
+                            {% if category == 'success' %}
+                                <i class="ti ti-check me-2"></i>
+                            {% elif category == 'error' %}
+                                <i class="ti ti-alert-circle me-2"></i>
+                            {% elif category == 'warning' %}
+                                <i class="ti ti-alert-triangle me-2"></i>
+                            {% else %}
+                                <i class="ti ti-info-circle me-2"></i>
+                            {% endif %}
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <div class="card card-md">
+                <div class="card-body">
+                    <h2 class="h2 text-center mb-4">Iniciar Sesión</h2>
+                    
+                    <form action="{{ url_for('auth.login') }}" method="post">
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="email" class="form-control" placeholder="tu.email@empresa.com" required>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <label class="form-label">
+                                Contraseña
+                            </label>
+                            <div class="input-group input-group-flat">
+                                <input type="password" name="password" class="form-control" placeholder="Tu contraseña" required>
+                                <span class="input-group-text">
+                                    <a href="#" class="link-secondary" onclick="togglePassword()" title="Mostrar contraseña">
+                                        <i class="ti ti-eye" id="password-icon"></i>
+                                    </a>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-footer">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="ti ti-login me-2"></i>
+                                Iniciar Sesión
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="text-center text-muted mt-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h4>Usuarios de prueba:</h4>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Administrador:</strong><br>
+                                <code>admin@empresa.com</code><br>
+                                <code>admin123</code>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Empleado:</strong><br>
+                                <code>juan.perez@empresa.com</code><br>
+                                <code>user123</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/js/tabler.min.js"></script>
+    
+    <script>
+        function togglePassword() {
+            const passwordInput = document.querySelector('input[name="password"]');
+            const passwordIcon = document.getElementById('password-icon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                passwordIcon.className = 'ti ti-eye-off';
+            } else {
+                passwordInput.type = 'password';
+                passwordIcon.className = 'ti ti-eye';
+            }
+        }
+    </script>
+</body>
+</html>
