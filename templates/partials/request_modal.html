@@ -1,23 +1,17 @@
-<!-- Modal para nueva solicitud -->
+<!-- Modal para nueva solicitud - SOLO VACACIONES -->
 <div class="modal modal-blur fade" id="newRequestModal" tabindex="-1" aria-labelledby="newRequestModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="newRequestModalLabel">Nueva Solicitud</h5>
+                <h5 class="modal-title" id="newRequestModalLabel">Nueva Solicitud de Vacaciones</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="POST" action="{{ url_for('requests.create') }}">
+                <!-- Tipo fijo: solo vacaciones -->
+                <input type="hidden" name="type" value="vacation">
+                
                 <div class="modal-body">
                     <div class="row">
-                        <div class="col-12 mb-3">
-                            <label class="form-label">Tipo de solicitud</label>
-                            <select name="type" class="form-select" required onchange="toggleRequestType()">
-                                <option value="">Seleccionar tipo</option>
-                                <option value="vacation">Vacaciones</option>
-                                <option value="recovery">Recuperación de festivo</option>
-                            </select>
-                        </div>
-                        
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Fecha de inicio</label>
                             <input type="date" name="start_date" class="form-control" required onchange="validateDates()">
@@ -30,7 +24,7 @@
                         
                         <div class="col-12 mb-3">
                             <label class="form-label">Motivo (opcional)</label>
-                            <textarea name="reason" class="form-control" rows="3" placeholder="Describe el motivo de tu solicitud..."></textarea>
+                            <textarea name="reason" class="form-control" rows="3" placeholder="Describe el motivo de tus vacaciones..."></textarea>
                         </div>
                         
                         <div class="col-12">
@@ -40,7 +34,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary" id="submitBtn" disabled>Crear Solicitud</button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn" disabled>Solicitar Vacaciones</button>
                 </div>
             </form>
         </div>

@@ -1,0 +1,467 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Empleados - Sistema de Vacaciones{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+    <div class="container-xl">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <h2 class="page-title">
+                    Gestión de Empleados
+                </h2>
+                <div class="text-muted">
+                    Administrar empleados, departamentos y días de vacaciones personalizados
+                </div>
+            </div>
+            <div class="col-auto ms-auto d-print-none">
+                <a href="{{ url_for('admin.departments') }}" class="btn btn-outline-primary me-2">
+                    <i class="ti ti-building me-2"></i>
+                    Gestionar Departamentos
+                </a>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newEmployeeModal">
+                    <i class="ti ti-plus me-2"></i>
+                    Nuevo Empleado
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-body">
+    <div class="container-xl">
+        <div class="row row-deck row-cards">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Empleados</h3>
+                        <span class="badge bg-primary ms-auto">{{ employees|length }}</span>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if employees %}
+                            <div class="table-responsive">
+                                <table class="table table-vcenter card-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Empleado</th>
+                                            <th>Departamento</th>
+                                            <th>Días Vacaciones</th>
+                                            <th>Balance Actual</th>
+                                            <th>Estado</th>
+                                            <th>Contratación</th>
+                                            <th class="w-1">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for emp in employees %}
+                                            {% set balance = emp.get_vacation_balance_info() %}
+                                            <tr class="{{ 'table-warning' if not emp.is_active }}">
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <span class="avatar avatar-sm me-3">{{ emp.name[0].upper() }}</span>
+                                                        <div>
+                                                            <div class="font-weight-medium">{{ emp.name }}</div>
+                                                            <div class="text-muted">{{ emp.email }}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-azure-lt">{{ emp.department.name }}</span>
+                                                </td>
+                                                <td>
+                                                    {% if emp.vacation_days_override %}
+                                                        <span class="badge bg-warning" title="Días personalizados">
+                                                            {{ emp.vacation_days_override }} días
+                                                            <i class="ti ti-star ms-1"></i>
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary" title="Días del departamento">
+                                                            {{ emp.department.vacation_days_per_year }} días
+                                                        </span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if balance.is_negative %}
+                                                        <span class="badge bg-danger" title="Balance negativo">
+                                                            {{ balance.available_days }} días
+                                                            <i class="ti ti-alert-triangle ms-1"></i>
+                                                        </span>
+                                                    {% elif balance.available_days <= 5 %}
+                                                        <span class="badge bg-warning" title="Pocos días disponibles">
+                                                            {{ balance.available_days }} días
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="badge bg-success">
+                                                            {{ balance.available_days }} días
+                                                        </span>
+                                                    {% endif %}
+                                                    <br><small class="text-muted">{{ balance.used_days }}/{{ balance.total_days }} usados</small>
+                                                </td>
+                                                <td>
+                                                    {% if emp.is_active %}
+                                                        <span class="badge bg-success">Activo</span>
+                                                    {% else %}
+                                                        <span class="badge bg-danger">Inactivo</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <small class="text-muted">
+                                                        {{ emp.hire_date.strftime('%d/%m/%y') if emp.hire_date else '-' }}
+                                                    </small>
+                                                </td>
+                                                <td>
+                                                    <div class="btn-list flex-nowrap">
+                                                        <button type="button" class="btn btn-info btn-sm" 
+                                                                onclick="showEmployeeBalance({{ emp.id }}, '{{ emp.name }}')"
+                                                                title="Ver balance detallado">
+                                                            <i class="ti ti-calendar-stats"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-warning btn-sm" 
+                                                                onclick="showEditEmployeeModal({{ emp.id }}, '{{ emp.name }}', '{{ emp.email }}', {{ emp.department_id }}, {{ emp.vacation_days_override or 'null' }}, '{{ emp.hire_date.strftime('%Y-%m-%d') if emp.hire_date else '' }}', {{ emp.is_active|lower }})"
+                                                                title="Editar empleado">
+                                                            <i class="ti ti-edit"></i>
+                                                        </button>
+                                                        {% if emp.is_active %}
+                                                            <button type="button" class="btn btn-outline-danger btn-sm" 
+                                                                    onclick="deactivateEmployee({{ emp.id }}, '{{ emp.name }}')"
+                                                                    title="Desactivar empleado">
+                                                                <i class="ti ti-user-off"></i>
+                                                            </button>
+                                                        {% endif %}
+                                                        <button type="button" class="btn btn-secondary btn-sm" 
+                                                                onclick="showResetPasswordModal({{ emp.id }}, '{{ emp.name }}')"
+                                                                title="Resetear contraseña">
+                                                            <i class="ti ti-key"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center text-muted py-5">
+                                <i class="ti ti-users mb-3" style="font-size: 3rem;"></i>
+                                <div class="h4">No hay empleados</div>
+                                <div>Haz clic en "Nuevo Empleado" para comenzar</div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para nuevo empleado -->
+<div class="modal modal-blur fade" id="newEmployeeModal" tabindex="-1" aria-labelledby="newEmployeeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newEmployeeModalLabel">Nuevo Empleado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('admin.create_employee') }}">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nombre completo</label>
+                            <input type="text" name="name" class="form-control" required placeholder="Juan Pérez García">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="email" class="form-control" required placeholder="juan.perez@empresa.com">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Departamento</label>
+                            <select name="department_id" class="form-select" required>
+                                <option value="">Seleccionar departamento</option>
+                                {% for dept in departments %}
+                                    <option value="{{ dept.id }}">{{ dept.name }} ({{ dept.vacation_days_per_year }} días/año)</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Contraseña temporal</label>
+                            <input type="text" name="password" class="form-control" value="temp123" required>
+                            <div class="form-hint">El empleado podrá cambiarla al iniciar sesión</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Días de vacaciones personalizados (opcional)</label>
+                            <input type="number" name="vacation_days_override" class="form-control" min="0" max="50" placeholder="Dejar vacío para usar del departamento">
+                            <div class="form-hint">Solo si es diferente al departamento</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Fecha de contratación</label>
+                            <input type="date" name="hire_date" class="form-control" value="{{ moment().format('YYYY-MM-DD') if moment else '' }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Crear Empleado</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para editar empleado -->
+<div class="modal modal-blur fade" id="editEmployeeModal" tabindex="-1" aria-labelledby="editEmployeeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editEmployeeModalLabel">Editar Empleado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="" id="editEmployeeForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nombre completo</label>
+                            <input type="text" name="name" class="form-control" required id="editEmpName">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="email" class="form-control" required id="editEmpEmail">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Departamento</label>
+                            <select name="department_id" class="form-select" required id="editEmpDepartment">
+                                {% for dept in departments %}
+                                    <option value="{{ dept.id }}">{{ dept.name }} ({{ dept.vacation_days_per_year }} días/año)</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Estado</label>
+                            <select name="is_active" class="form-select" id="editEmpActive">
+                                <option value="1">Activo</option>
+                                <option value="0">Inactivo</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Días de vacaciones personalizados</label>
+                            <input type="number" name="vacation_days_override" class="form-control" min="0" max="50" id="editEmpVacationDays" placeholder="Dejar vacío para usar del departamento">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Fecha de contratación</label>
+                            <input type="date" name="hire_date" class="form-control" id="editEmpHireDate">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para resetear contraseña -->
+<div class="modal modal-blur fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="resetPasswordModalLabel">Resetear Contraseña</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="" id="resetPasswordForm">
+                <div class="modal-body">
+                    <p>¿Resetear la contraseña de <strong id="resetPasswordUserName"></strong>?</p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Nueva contraseña</label>
+                        <input type="text" name="new_password" class="form-control" value="temp123" required>
+                        <div class="form-hint">El empleado deberá cambiarla al iniciar sesión</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Resetear Contraseña</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para ver balance detallado -->
+<div class="modal modal-blur fade" id="employeeBalanceModal" tabindex="-1" aria-labelledby="employeeBalanceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="employeeBalanceModalLabel">Balance de Vacaciones</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="employeeBalanceContent">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showEditEmployeeModal(empId, name, email, deptId, vacationDays, hireDate, isActive) {
+    document.getElementById('editEmployeeForm').action = `/admin/employees/${empId}/edit`;
+    document.getElementById('editEmpName').value = name;
+    document.getElementById('editEmpEmail').value = email;
+    document.getElementById('editEmpDepartment').value = deptId;
+    document.getElementById('editEmpVacationDays').value = vacationDays === null ? '' : vacationDays;
+    document.getElementById('editEmpHireDate').value = hireDate;
+    document.getElementById('editEmpActive').value = isActive ? '1' : '0';
+    new bootstrap.Modal(document.getElementById('editEmployeeModal')).show();
+}
+
+function showResetPasswordModal(empId, empName) {
+    document.getElementById('resetPasswordUserName').textContent = empName;
+    document.getElementById('resetPasswordForm').action = `/admin/employees/${empId}/reset-password`;
+    new bootstrap.Modal(document.getElementById('resetPasswordModal')).show();
+}
+
+function deactivateEmployee(empId, empName) {
+    if (confirm(`¿Desactivar a ${empName}? No podrá acceder al sistema.`)) {
+        fetch(`/admin/employees/${empId}/deactivate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }
+        }).then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Error al desactivar el empleado');
+            }
+        });
+    }
+}
+
+async function showEmployeeBalance(empId, empName) {
+    const modal = document.getElementById('employeeBalanceModal');
+    const content = document.getElementById('employeeBalanceContent');
+    const title = document.getElementById('employeeBalanceModalLabel');
+    
+    title.textContent = `Balance de Vacaciones - ${empName}`;
+    content.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+        </div>
+    `;
+    
+    new bootstrap.Modal(modal).show();
+    
+    try {
+        const response = await fetch(`/admin/api/employee/${empId}/vacation-balance`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const balance = data.balance;
+            content.innerHTML = `
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <div class="h2 text-primary">${balance.total_days}</div>
+                                <div class="text-muted">Días totales</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <div class="h2 text-warning">${balance.used_days}</div>
+                                <div class="text-muted">Días usados</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <div class="h2 ${balance.is_negative ? 'text-danger' : balance.available_days <= 5 ? 'text-warning' : 'text-success'}">${balance.available_days}</div>
+                                <div class="text-muted">Días disponibles</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                ${balance.is_negative ? `
+                    <div class="alert alert-danger mt-3">
+                        <i class="ti ti-alert-triangle me-2"></i>
+                        <strong>Balance negativo:</strong> Este empleado ha usado más días de los asignados para el año ${balance.year}.
+                    </div>
+                ` : ''}
+                
+                <div class="text-center mt-3 text-muted">
+                    <small>Año ${balance.year}</small>
+                </div>
+            `;
+        } else {
+            content.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="ti ti-alert-circle me-2"></i>
+                    Error al cargar el balance: ${data.error || 'Error desconocido'}
+                </div>
+            `;
+        }
+    } catch (error) {
+        content.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="ti ti-wifi-off me-2"></i>
+                Error de conexión. Inténtalo de nuevo.
+            </div>
+        `;
+    }
+}
+
+// Funciones para compatibilidad con los data attributes
+function showEditEmployeeModal(empId, name, email, deptId, vacationDays, hireDate, isActive) {
+    // Esta función existe para compatibilidad con el HTML generado
+    window.adminModalsManager.populateEditEmployeeModal(empId, name, email, deptId, vacationDays, hireDate, isActive);
+    new bootstrap.Modal(document.getElementById('editEmployeeModal')).show();
+}
+
+function showResetPasswordModal(empId, empName) {
+    window.adminModalsManager.populateResetPasswordModal(empId, empName);
+    new bootstrap.Modal(document.getElementById('resetPasswordModal')).show();
+}
+
+function deactivateEmployee(empId, empName) {
+    if (confirm(`¿Desactivar a ${empName}? No podrá acceder al sistema.`)) {
+        fetch(`/admin/employees/${empId}/deactivate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }
+        }).then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Error al desactivar el empleado');
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

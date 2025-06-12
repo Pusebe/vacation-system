@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Departamentos - Sistema de Vacaciones{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+    <div class="container-xl">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <h2 class="page-title">
+                    Gestión de Departamentos
+                </h2>
+                <div class="text-muted">
+                    Administrar departamentos, empleados máximos de vacaciones y días por año
+                </div>
+            </div>
+            <div class="col-auto ms-auto d-print-none">
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newDepartmentModal">
+                    <i class="ti ti-plus me-2"></i>
+                    Nuevo Departamento
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-body">
+    <div class="container-xl">
+        <div class="row row-deck row-cards">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Departamentos</h3>
+                        <span class="badge bg-primary ms-auto">{{ departments|length }}</span>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if departments %}
+                            <div class="table-responsive">
+                                <table class="table table-vcenter card-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Departamento</th>
+                                            <th>Empleados</th>
+                                            <th>Máx. Vacaciones Concurrentes</th>
+                                            <th>Días Vacaciones/Año</th>
+                                            <th>Creado</th>
+                                            <th class="w-1">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for dept in departments %}
+                                            <tr>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <span class="avatar avatar-sm me-3 bg-primary">
+                                                            {{ dept.name[0].upper() }}
+                                                        </span>
+                                                        <div>
+                                                            <div class="font-weight-medium">{{ dept.name }}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-info">{{ dept.get_employees()|length }} empleados</span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-warning">{{ dept.max_concurrent_vacations }}</span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-success">{{ dept.vacation_days_per_year }} días</span>
+                                                </td>
+                                                <td>
+                                                    <small class="text-muted">{{ dept.created_at.strftime('%d/%m/%y') if dept.created_at else '-' }}</small>
+                                                </td>
+                                                <td>
+                                                    <div class="btn-list flex-nowrap">
+                                                        <button type="button" class="btn btn-warning btn-sm" 
+                                                                data-bs-toggle="modal" 
+                                                                data-bs-target="#editDepartmentModal"
+                                                                data-dept-id="{{ dept.id }}"
+                                                                data-dept-name="{{ dept.name }}"
+                                                                data-dept-max-concurrent="{{ dept.max_concurrent_vacations }}"
+                                                                data-dept-vacation-days="{{ dept.vacation_days_per_year }}">
+                                                            <i class="ti ti-edit"></i>
+                                                        </button>
+                                                        {% if dept.get_employees()|length == 0 %}
+                                                            <form method="POST" action="{{ url_for('admin.delete_department', dept_id=dept.id) }}" style="display: inline;">
+                                                                <button type="submit" class="btn btn-danger btn-sm" 
+                                                                        onclick="return confirm('¿Eliminar el departamento {{ dept.name }}? Esta acción no se puede deshacer.')">
+                                                                    <i class="ti ti-trash"></i>
+                                                                </button>
+                                                            </form>
+                                                        {% else %}
+                                                            <button type="button" class="btn btn-outline-danger btn-sm" disabled 
+                                                                    title="No se puede eliminar: tiene empleados">
+                                                                <i class="ti ti-trash"></i>
+                                                            </button>
+                                                        {% endif %}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center text-muted py-5">
+                                <i class="ti ti-building mb-3" style="font-size: 3rem;"></i>
+                                <div class="h4">No hay departamentos</div>
+                                <div>Haz clic en "Nuevo Departamento" para comenzar</div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para nuevo departamento -->
+<div class="modal modal-blur fade" id="newDepartmentModal" tabindex="-1" aria-labelledby="newDepartmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newDepartmentModalLabel">Nuevo Departamento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('admin.create_department') }}">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Nombre del departamento</label>
+                            <input type="text" name="name" class="form-control" required placeholder="Ej: Desarrollo, Marketing...">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Máximo vacaciones concurrentes</label>
+                            <input type="number" name="max_concurrent_vacations" class="form-control" value="1" min="1" required>
+                            <div class="form-hint">Cuántos empleados pueden estar de vacaciones a la vez</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Días de vacaciones por año</label>
+                            <input type="number" name="vacation_days_per_year" class="form-control" value="22" min="0" max="50" required>
+                            <div class="form-hint">Días que tendrán los empleados de este departamento</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Crear Departamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para editar departamento -->
+<div class="modal modal-blur fade" id="editDepartmentModal" tabindex="-1" aria-labelledby="editDepartmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editDepartmentModalLabel">Editar Departamento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="" id="editDepartmentForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Nombre del departamento</label>
+                            <input type="text" name="name" class="form-control" required id="editDeptName">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Máximo vacaciones concurrentes</label>
+                            <input type="number" name="max_concurrent_vacations" class="form-control" min="1" required id="editDeptMaxConcurrent">
+                            <div class="form-hint">Cuántos empleados pueden estar de vacaciones a la vez</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Días de vacaciones por año</label>
+                            <input type="number" name="vacation_days_per_year" class="form-control" min="0" max="50" required id="editDeptVacationDays">
+                            <div class="form-hint">Días que tendrán los empleados de este departamento</div>
+                        </div>
+                        
+                        <div class="col-12">
+                            <div class="alert alert-warning">
+                                <i class="ti ti-alert-triangle me-2"></i>
+                                <strong>Atención:</strong> Cambiar los días de vacaciones afectará a empleados que no tengan días personalizados.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- JavaScript se carga automáticamente desde admin-modals.js -->
+{% endblock %}

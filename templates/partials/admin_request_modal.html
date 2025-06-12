@@ -21,7 +21,10 @@
                                 {% for dept in departments %}
                                     <optgroup label="{{ dept.name }}">
                                         {% for emp in dept.get_employees() %}
-                                            <option value="{{ emp.id }}">{{ emp.name }}</option>
+                                            <option value="{{ emp.id }}" 
+                                                data-available-holidays="{{ emp.get_available_holidays_count() }}">
+                                                {{ emp.name }}
+                                            </option>
                                         {% endfor %}
                                     </optgroup>
                                 {% endfor %}
@@ -30,10 +33,10 @@
                         
                         <div class="col-12 mb-3">
                             <label class="form-label">Tipo de solicitud</label>
-                            <select name="type" class="form-select" required>
+                            <select name="type" class="form-select" required id="adminRequestType">
                                 <option value="">Seleccionar tipo</option>
                                 <option value="vacation">Vacaciones</option>
-                                <option value="recovery">Recuperación de festivo</option>
+                                <option value="recovery" id="recoveryOption" disabled>Recuperación de festivo (sin festivos disponibles)</option>
                             </select>
                         </div>
                         
@@ -50,6 +53,13 @@
                         <div class="col-12 mb-3">
                             <label class="form-label">Motivo</label>
                             <textarea name="reason" class="form-control" rows="3" placeholder="Motivo de la solicitud..." required></textarea>
+                        </div>
+                        
+                        <div class="col-12 mb-3" id="holidayWarning" style="display: none;">
+                            <div class="alert alert-warning">
+                                <i class="ti ti-alert-triangle me-2"></i>
+                                <strong>Atención:</strong> Al aprobar esta recuperación se descontará 1 festivo trabajado del empleado.
+                            </div>
                         </div>
                         
                         <div class="col-12">

@@ -19,7 +19,7 @@ class Config:
     # Configuración de sesiones - sesiones permanentes
     SESSION_PERMANENT = True
     PERMANENT_SESSION_LIFETIME = timedelta(seconds=int(os.environ.get('PERMANENT_SESSION_LIFETIME', 31536000)))  # 1 año por defecto
-    SESSION_COOKIE_SECURE = False  # HTTPS en producción
+    SESSION_COOKIE_SECURE = True  # HTTPS en producción
     SESSION_COOKIE_HTTPONLY = True  # Prevenir acceso via JavaScript
     SESSION_COOKIE_SAMESITE = 'Lax'
     

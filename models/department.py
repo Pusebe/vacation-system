@@ -8,6 +8,13 @@ class Department(db.Model):
     name = db.Column(db.String(100), nullable=False, unique=True)
     max_concurrent_vacations = db.Column(db.Integer, default=1, nullable=False)
     
+    # NUEVO: Días de vacaciones por año para empleados de este departamento
+    vacation_days_per_year = db.Column(db.Integer, default=22, nullable=False)
+    
+    # NUEVO: Campos de auditoría
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp(), nullable=False)
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+    
     # Relaciones
     users = db.relationship('User', backref='department', lazy=True)
     
@@ -100,3 +107,97 @@ class Department(db.Model):
             'pending_requests': pending_requests,
             'employees_count': len(self.get_employees())
         }
+    
+    # ============================================================================
+    # NUEVOS MÉTODOS PARA GESTIÓN
+    # ============================================================================
+    
+    def update_details(self, name=None, max_concurrent=None, vacation_days=None):
+        """Actualizar detalles del departamento"""
+        if name and name != self.name:
+            # Verificar que no exista otro departamento con ese nombre
+            existing = Department.query.filter(
+                Department.name == name,
+                Department.id != self.id
+            ).first()
+            if existing:
+                return False, "Ya existe un departamento con ese nombre"
+            self.name = name
+        
+        if max_concurrent is not None:
+            if max_concurrent < 1:
+                return False, "El máximo de vacaciones concurrentes debe ser al menos 1"
+            self.max_concurrent_vacations = max_concurrent
+        
+        if vacation_days is not None:
+            if vacation_days < 0:
+                return False, "Los días de vacaciones no pueden ser negativos"
+            if vacation_days > 50:
+                return False, "Los días de vacaciones no pueden superar 50 por año"
+            self.vacation_days_per_year = vacation_days
+        
+        try:
+            db.session.commit()
+            return True, "Departamento actualizado correctamente"
+        except Exception as e:
+            db.session.rollback()
+            return False, f"Error al actualizar: {str(e)}"
+    
+    def can_be_deleted(self):
+        """Verificar si el departamento puede ser eliminado"""
+        active_employees = len(self.get_employees())
+        if active_employees > 0:
+            return False, f"No se puede eliminar: tiene {active_employees} empleado(s) activo(s)"
+        
+        # Verificar si hay solicitudes asociadas
+        from .request import Request
+        requests_count = Request.query.filter(
+            Request.user_id.in_([user.id for user in self.users])
+        ).count()
+        
+        if requests_count > 0:
+            return False, f"No se puede eliminar: tiene {requests_count} solicitud(es) asociada(s)"
+        
+        return True, "Se puede eliminar"
+    
+    def delete_department(self):
+        """Eliminar departamento"""
+        can_delete, message = self.can_be_deleted()
+        if not can_delete:
+            return False, message
+        
+        try:
+            db.session.delete(self)
+            db.session.commit()
+            return True, "Departamento eliminado correctamente"
+        except Exception as e:
+            db.session.rollback()
+            return False, f"Error al eliminar: {str(e)}"
+    
+    @staticmethod
+    def create_department(name, max_concurrent=1, vacation_days=22):
+        """Crear nuevo departamento"""
+        # Verificar que no exista
+        existing = Department.query.filter_by(name=name).first()
+        if existing:
+            return None, "Ya existe un departamento con ese nombre"
+        
+        # Validaciones
+        if max_concurrent < 1:
+            return None, "El máximo de vacaciones concurrentes debe ser al menos 1"
+        
+        if vacation_days < 0 or vacation_days > 50:
+            return None, "Los días de vacaciones deben estar entre 0 y 50"
+        
+        try:
+            department = Department(
+                name=name,
+                max_concurrent_vacations=max_concurrent,
+                vacation_days_per_year=vacation_days
+            )
+            db.session.add(department)
+            db.session.commit()
+            return department, "Departamento creado correctamente"
+        except Exception as e:
+            db.session.rollback()
+            return None, f"Error al crear: {str(e)}"

@@ -1,4 +1,4 @@
-<!-- Estadísticas del empleado -->
+<!-- Estadísticas del empleado - CORREGIDAS -->
 <div class="col-12">
     <div class="row row-cards">
         <div class="col-sm-6 col-lg-3">
@@ -11,8 +11,8 @@
                             </span>
                         </div>
                         <div class="col">
-                            <div class="font-weight-medium">{{ vacation_days_available }}</div>
-                            <div class="text-muted">Días disponibles</div>
+                            <div class="font-weight-medium">{{ get_current_user().get_vacation_days_available() }}</div>
+                            <div class="text-muted">Días de vacaciones disponibles</div>
                         </div>
                     </div>
                 </div>
@@ -29,10 +29,10 @@
                             </span>
                         </div>
                         <div class="col">
-                            <div class="font-weight-medium">{{ holidays_to_recover }}</div>
+                            <div class="font-weight-medium">{{ get_current_user().get_available_holidays_count() }}</div>
                             <div class="text-muted">
                                 <a href="{{ url_for('holidays.index') }}" class="text-decoration-none text-muted">
-                                    Festivos por recuperar
+                                    Festivos disponibles para recuperar
                                 </a>
                             </div>
                         </div>
@@ -51,7 +51,7 @@
                             </span>
                         </div>
                         <div class="col">
-                            <div class="font-weight-medium">{{ pending_requests + pending_holidays }}</div>
+                            <div class="font-weight-medium">{{ get_current_user().get_pending_approvals_count() }}</div>
                             <div class="text-muted">Pendientes de aprobación</div>
                         </div>
                     </div>
@@ -112,6 +112,43 @@
                     <h4 class="alert-title">Próximas vacaciones</h4>
                     <div class="text-muted">
                         Del {{ next_vacation.start_date|date }} al {{ next_vacation.end_date|date }}.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<!-- Alertas si hay problemas -->
+{% if get_current_user().get_vacation_days_available() == 0 and get_current_user().get_available_holidays_count() == 0 %}
+    <div class="col-12">
+        <div class="alert alert-warning">
+            <div class="d-flex">
+                <div>
+                    <i class="ti ti-alert-triangle me-2"></i>
+                </div>
+                <div>
+                    <h4 class="alert-title">Sin días disponibles</h4>
+                    <div class="text-muted">
+                        No tienes días de vacaciones ni festivos disponibles para recuperar. 
+                        Puedes <a href="{{ url_for('holidays.index') }}">marcar festivos trabajados</a> para ganar días de recuperación.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% elif get_current_user().get_available_holidays_count() > 0 %}
+    <div class="col-12">
+        <div class="alert alert-info">
+            <div class="d-flex">
+                <div>
+                    <i class="ti ti-calendar-check me-2"></i>
+                </div>
+                <div>
+                    <h4 class="alert-title">Festivos disponibles</h4>
+                    <div class="text-muted">
+                        Tienes {{ get_current_user().get_available_holidays_count() }} festivo(s) disponible(s) para recuperar. 
+                        <a href="{{ url_for('holidays.index') }}">Solicita tus días de recuperación</a>.
                     </div>
                 </div>
             </div>

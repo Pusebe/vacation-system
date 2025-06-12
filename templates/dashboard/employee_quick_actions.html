@@ -1,4 +1,4 @@
-<!-- Acciones rápidas para empleados -->
+<!-- Acciones rápidas para empleados - SIN recovery -->
 <div class="col-12">
     <div class="card">
         <div class="card-header">
@@ -26,10 +26,10 @@
                 </div>
                 <div class="col-md-4 mb-3">
                     <a href="{{ url_for('holidays.index') }}" class="btn btn-warning w-100 h-100">
-                        <i class="ti ti-eye me-2"></i>
+                        <i class="ti ti-calendar-check me-2"></i>
                         <div>
-                            <strong>Ver Festivos</strong>
-                            <br><small class="opacity-75">Gestionar y pedir recuperaciones</small>
+                            <strong>Gestionar Festivos</strong>
+                            <br><small class="opacity-75">Ver y solicitar recuperaciones</small>
                         </div>
                     </a>
                 </div>
@@ -38,7 +38,7 @@
     </div>
 </div>
 
-<!-- Modal para pedir vacaciones (simplificado) -->
+<!-- Modal para pedir vacaciones (solo vacaciones) -->
 <div class="modal modal-blur fade" id="newVacationModal" tabindex="-1" aria-labelledby="newVacationModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">

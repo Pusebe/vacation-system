@@ -41,6 +41,27 @@ def create():
         end_date = datetime.strptime(flask_request.form.get('end_date'), '%Y-%m-%d').date()
         reason = flask_request.form.get('reason', '').strip()
         
+        # VALIDACIÓN: Recovery solo desde /holidays o admin con festivos disponibles
+        if request_type == 'recovery':
+            # Si no es admin, rechazar directamente
+            if not g.user.is_admin():
+                flash('Las recuperaciones solo se pueden solicitar desde la página de festivos.', 'error')
+                return redirect(url_for('requests.index'))
+            
+            # Si es admin, verificar que el empleado tenga festivos disponibles
+            if flask_request.form.get('user_id'):
+                user_id = int(flask_request.form.get('user_id'))
+                target_user = User.query.get_or_404(user_id)
+                
+                if target_user.get_available_holidays_count() == 0:
+                    flash(f'{target_user.name} no tiene festivos disponibles para recuperación.', 'error')
+                    return redirect(url_for('requests.index'))
+            else:
+                # Si es para sí mismo y no tiene festivos
+                if g.user.get_available_holidays_count() == 0:
+                    flash('No tienes festivos disponibles para recuperación.', 'error')
+                    return redirect(url_for('requests.index'))
+        
         # Si es admin y especifica user_id, crear para otro usuario
         if g.user.is_admin() and flask_request.form.get('user_id'):
             user_id = int(flask_request.form.get('user_id'))
@@ -76,7 +97,16 @@ def create():
         if auto_approve:
             success, message = new_request.approve(g.user)
             if success:
-                flash(f'Solicitud creada y aprobada para {target_user.name}.', 'success')
+                # Si es recovery, descontar festivo disponible
+                if request_type == 'recovery':
+                    used_holiday = target_user.use_available_holiday()
+                    if used_holiday:
+                        db.session.commit()
+                        flash(f'Solicitud de recuperación creada y aprobada para {target_user.name}. Se ha descontado 1 festivo.', 'success')
+                    else:
+                        flash(f'Solicitud aprobada pero no se pudo descontar festivo.', 'warning')
+                else:
+                    flash(f'Solicitud creada y aprobada para {target_user.name}.', 'success')
             else:
                 flash(f'Solicitud creada pero error al aprobar: {message}', 'warning')
         else:

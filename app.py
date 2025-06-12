@@ -19,6 +19,7 @@ def create_app():
     from views.holidays import holidays_bp
     from views.api import api_bp
     from views.calendar import calendar_bp
+    from views.admin import admin_bp
     
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -26,6 +27,7 @@ def create_app():
     app.register_blueprint(holidays_bp)
     app.register_blueprint(api_bp)
     app.register_blueprint(calendar_bp)
+    app.register_blueprint(admin_bp)
     
     # Configurar zona horaria y contexto global
     @app.before_request
@@ -86,6 +88,9 @@ def create_app():
         
         # Crear datos iniciales si es la primera vez
         create_initial_data()
+        
+        # Migrar datos existentes para nuevas columnas
+        migrate_existing_data()
     
     return app
 
@@ -101,11 +106,11 @@ def create_initial_data():
     try:
         # Crear departamentos por defecto
         departments = [
-            Department(name='Administración', max_concurrent_vacations=1),
-            Department(name='Desarrollo', max_concurrent_vacations=1),
-            Department(name='Marketing', max_concurrent_vacations=1),
-            Department(name='Ventas', max_concurrent_vacations=1),
-            Department(name='Recursos Humanos', max_concurrent_vacations=1)
+            Department(name='Administración', max_concurrent_vacations=1, vacation_days_per_year=25),
+            Department(name='Desarrollo', max_concurrent_vacations=1, vacation_days_per_year=22),
+            Department(name='Marketing', max_concurrent_vacations=1, vacation_days_per_year=22),
+            Department(name='Ventas', max_concurrent_vacations=1, vacation_days_per_year=22),
+            Department(name='Recursos Humanos', max_concurrent_vacations=1, vacation_days_per_year=24)
         ]
         
         for dept in departments:
@@ -119,7 +124,8 @@ def create_initial_data():
             name='Administrador',
             department_id=departments[0].id,  # Administración
             role='admin',
-            is_active=True
+            is_active=True,
+            vacation_days_override=30  # Admin tiene más días
         )
         admin_user.set_password('admin123')  # Cambiar en primera configuración
         
@@ -131,19 +137,22 @@ def create_initial_data():
                 'email': 'juan.perez@empresa.com',
                 'name': 'Juan Pérez',
                 'department_id': departments[1].id,  # Desarrollo
-                'password': 'user123'
+                'password': 'user123',
+                'vacation_days_override': None  # Usa los del departamento
             },
             {
                 'email': 'maria.garcia@empresa.com',
                 'name': 'María García',
                 'department_id': departments[2].id,  # Marketing
-                'password': 'user123'
+                'password': 'user123',
+                'vacation_days_override': 25  # Días personalizados
             },
             {
                 'email': 'carlos.lopez@empresa.com',
                 'name': 'Carlos López',
                 'department_id': departments[1].id,  # Desarrollo
-                'password': 'user123'
+                'password': 'user123',
+                'vacation_days_override': None
             }
         ]
         
@@ -153,7 +162,8 @@ def create_initial_data():
                 name=user_data['name'],
                 department_id=user_data['department_id'],
                 role='employee',
-                is_active=True
+                is_active=True,
+                vacation_days_override=user_data['vacation_days_override']
             )
             user.set_password(user_data['password'])
             db.session.add(user)
@@ -166,6 +176,43 @@ def create_initial_data():
     except Exception as e:
         db.session.rollback()
         print(f"Error creando datos iniciales: {e}")
+
+def migrate_existing_data():
+    """Migrar datos existentes para añadir nuevas columnas"""
+    try:
+        # Verificar si necesitamos añadir las nuevas columnas a la BD
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        
+        # Verificar columnas en Department
+        dept_columns = [col['name'] for col in inspector.get_columns('departments')]
+        if 'vacation_days_per_year' not in dept_columns:
+            print("Añadiendo columna vacation_days_per_year a departments...")
+            db.engine.execute('ALTER TABLE departments ADD COLUMN vacation_days_per_year INTEGER DEFAULT 22')
+            db.engine.execute('ALTER TABLE departments ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP')
+            db.engine.execute('ALTER TABLE departments ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP')
+        
+        # Verificar columnas en User
+        user_columns = [col['name'] for col in inspector.get_columns('users')]
+        if 'vacation_days_override' not in user_columns:
+            print("Añadiendo columnas de gestión a users...")
+            db.engine.execute('ALTER TABLE users ADD COLUMN vacation_days_override INTEGER')
+            db.engine.execute('ALTER TABLE users ADD COLUMN hire_date DATE')
+            db.engine.execute('ALTER TABLE users ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP')
+        
+        # Actualizar departamentos existentes con días por defecto
+        from models import Department
+        departments_without_days = Department.query.filter_by(vacation_days_per_year=None).all()
+        for dept in departments_without_days:
+            dept.vacation_days_per_year = 22  # Valor por defecto
+        
+        if departments_without_days:
+            db.session.commit()
+            print(f"Actualizados {len(departments_without_days)} departamentos con días por defecto")
+        
+    except Exception as e:
+        print(f"Error en migración: {e}")
+        # Continuar sin fallar, las migraciones son opcionales
 
 if __name__ == '__main__':
     app = create_app()
