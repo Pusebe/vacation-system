@@ -16,7 +16,7 @@
                     <div class="row">
                         <div class="col-12 mb-3">
                             <label class="form-label">Empleado</label>
-                            <select name="user_id" class="form-select" required>
+                            <select name="user_id" class="form-select" required onchange="checkEmployeeHolidays()">
                                 <option value="">Seleccionar empleado</option>
                                 {% for dept in departments %}
                                     <optgroup label="{{ dept.name }}">
@@ -33,7 +33,7 @@
                         
                         <div class="col-12 mb-3">
                             <label class="form-label">Tipo de solicitud</label>
-                            <select name="type" class="form-select" required id="adminRequestType">
+                            <select name="type" class="form-select" required id="adminRequestType" onchange="checkEmployeeHolidays()">
                                 <option value="">Seleccionar tipo</option>
                                 <option value="vacation">Vacaciones</option>
                                 <option value="recovery" id="recoveryOption" disabled>Recuperación de festivo (sin festivos disponibles)</option>

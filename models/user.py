@@ -212,18 +212,23 @@ class User(db.Model):
         
         return None
 
-    def get_vacation_days_per_year(self, year=None):
-        """Obtener días de vacaciones por año para este usuario"""
+    def get_vacation_days_base(self, year=None):
+        """Obtener días BASE del departamento o override (SIN proporcional)"""
         if self.vacation_days_override is not None:
             return self.vacation_days_override
         return self.department.vacation_days_per_year
 
-    def get_vacation_days_per_year_proportional(self, year=None):
-        """Calcular días proporcionalmente según fecha de contratación"""
+    def get_vacation_days_per_year(self, year=None):
+        """Obtener días de vacaciones por año (con cálculo proporcional si aplica)"""
         if not year:
             year = get_canary_time().year
+            
+        # Si tiene override personalizado, usarlo tal cual (sin proporcional)
+        if self.vacation_days_override is not None:
+            return self.vacation_days_override
         
-        base_days = self.get_vacation_days_per_year(year)
+        # Si no tiene override, usar días del departamento con cálculo proporcional
+        base_days = self.department.vacation_days_per_year
         
         # Si no tiene fecha de contratación, devolver días completos
         if not self.hire_date:
@@ -235,7 +240,6 @@ class User(db.Model):
         
         # Si fue contratado en el año en cuestión, calcular proporcionalmente
         if self.hire_date.year == year:
-            # Días restantes desde la contratación hasta fin de año
             start_of_year = date(year, 1, 1)
             end_of_year = date(year, 12, 31)
             
@@ -255,13 +259,13 @@ class User(db.Model):
         if not year:
             year = get_canary_time().year
         
-        # Días base del año actual
+        # Días base del año actual (con proporcional si aplica)
         vacation_days_total = self.get_vacation_days_per_year(year)
         vacation_days_used = self.get_vacation_days_used(year)
         
         # Calcular días no usados del año anterior (sin límites)
         carryover_days = 0
-        if year > 2025:  # Solo para 2026 en adelante
+        if year > 2024:  # Cambiado a 2024 para testing - cambiar a 2025 en producción
             previous_year = year - 1
             previous_total = self.get_vacation_days_per_year(previous_year)
             previous_used = self.get_vacation_days_used(previous_year)
@@ -289,14 +293,14 @@ class User(db.Model):
         
         # Calcular arrastre del año anterior
         carryover_days = 0
-        if year > 2025:
+        if year > 2024:  # Cambiado a 2024 para testing
             previous_year = year - 1
             previous_total = self.get_vacation_days_per_year(previous_year)
             previous_used = self.get_vacation_days_used(previous_year)
             previous_unused = previous_total - previous_used
             
             if previous_unused > 0:
-                carryover_days = min(previous_unused, 5)
+                carryover_days = previous_unused
         
         total_days = base_days + carryover_days
         available_days = total_days - used_days

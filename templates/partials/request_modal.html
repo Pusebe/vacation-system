@@ -14,12 +14,12 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Fecha de inicio</label>
-                            <input type="date" name="start_date" class="form-control" required onchange="validateDates()">
+                            <input type="date" name="start_date" class="form-control" required min="{{ moment().format('YYYY-MM-DD') if moment else '' }}" onchange="validateDates()">
                         </div>
                         
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Fecha de fin</label>
-                            <input type="date" name="end_date" class="form-control" required onchange="validateDates()">
+                            <input type="date" name="end_date" class="form-control" required min="{{ moment().format('YYYY-MM-DD') if moment else '' }}" onchange="validateDates()">
                         </div>
                         
                         <div class="col-12 mb-3">

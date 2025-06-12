@@ -11,7 +11,7 @@ class DateRangeManager {
     }
 
     /**
-     * Inicializar rango híbrido: inputs nativos + overlay de rango
+     * Inicializar rango híbrido: inputs nativos + overlay de rango SOLO SI NO ES ADMIN
      */
     initRange(config) {
         const {
@@ -32,9 +32,20 @@ class DateRangeManager {
             return null;
         }
 
-        // MANTENER inputs como type="date" nativos - NO tocar
-        // Solo añadir eventos para abrir el overlay
+        // VERIFICAR SI ES MODAL DE ADMIN - NO aplicar overlay complicado
+        const isAdminModal = startEl.closest('#adminCreateRequestModal') !== null;
+        
+        if (isAdminModal) {
+            console.log('Modal de admin detectado - usando inputs nativos simples');
+            // Para admin: solo configurar validación, sin overlay
+            this._setupNativeValidation(startEl, endEl, config);
+            return {
+                validate: () => this._validateRange(config),
+                destroy: () => this.destroyRange(`${startInput}-${endInput}`)
+            };
+        }
 
+        // Para empleados: sistema completo con overlay
         const rangeId = `${startInput}-${endInput}`;
         
         // Configurar eventos para abrir overlay
@@ -445,6 +456,12 @@ function initializeDateRanges() {
     dateInputPairs.forEach(startInput => {
         const modal = startInput.closest('.modal');
         if (!modal) return;
+        
+        // SALTARSE MODALES DE ADMIN
+        if (modal.id === 'adminCreateRequestModal') {
+            console.log('Saltando modal de admin para date-range');
+            return;
+        }
         
         const endInput = modal.querySelector('input[name="end_date"]');
         const typeSelect = modal.querySelector('select[name="type"]');
