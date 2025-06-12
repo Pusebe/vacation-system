@@ -127,6 +127,12 @@
                                                                     title="Desactivar empleado">
                                                                 <i class="ti ti-user-off"></i>
                                                             </button>
+                                                        {% else %}
+                                                            <button type="button" class="btn btn-outline-success btn-sm" 
+                                                                    onclick="reactivateEmployee({{ emp.id }}, '{{ emp.name }}')"
+                                                                    title="Reactivar empleado">
+                                                                <i class="ti ti-user-check"></i>
+                                                            </button>
                                                         {% endif %}
                                                         <button type="button" class="btn btn-secondary btn-sm" 
                                                                 onclick="showResetPasswordModal({{ emp.id }}, '{{ emp.name }}')"

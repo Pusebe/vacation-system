@@ -1,5 +1,6 @@
-from flask import Blueprint, render_template, request as flask_request, redirect, url_for, flash, session
-from models import User
+from flask import Blueprint, render_template, request as flask_request, redirect, url_for, flash, session, g
+from models import User, db
+from utils import login_required
 from werkzeug.security import check_password_hash
 
 auth_bp = Blueprint('auth', __name__)
@@ -52,3 +53,97 @@ def logout():
     session.clear()
     flash(f'Hasta luego, {user_name}!', 'info')
     return redirect(url_for('auth.login'))
+
+# Añadir estos endpoints en views/auth.py
+
+@auth_bp.route('/change-password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    """Cambiar contraseña del usuario"""
+    if flask_request.method == 'POST':
+        current_password = flask_request.form.get('current_password', '')
+        new_password = flask_request.form.get('new_password', '')
+        confirm_password = flask_request.form.get('confirm_password', '')
+        
+        # Validaciones
+        if not current_password or not new_password or not confirm_password:
+            flash('Todos los campos son obligatorios.', 'error')
+            return render_template('change_password.html')
+        
+        # Verificar contraseña actual
+        if not g.user.check_password(current_password):
+            flash('La contraseña actual es incorrecta.', 'error')
+            return render_template('change_password.html')
+        
+        # Verificar que las nuevas contraseñas coincidan
+        if new_password != confirm_password:
+            flash('Las nuevas contraseñas no coinciden.', 'error')
+            return render_template('change_password.html')
+        
+        # Validar fortaleza de la nueva contraseña
+        if len(new_password) < 6:
+            flash('La nueva contraseña debe tener al menos 6 caracteres.', 'error')
+            return render_template('change_password.html')
+        
+        # Verificar que no sea igual a la actual
+        if g.user.check_password(new_password):
+            flash('La nueva contraseña debe ser diferente a la actual.', 'error')
+            return render_template('change_password.html')
+        
+        try:
+            # Cambiar contraseña
+            g.user.set_password(new_password)
+            
+            # Si tenía flag de cambio obligatorio, quitarlo
+            if hasattr(g.user, 'must_change_password'):
+                g.user.must_change_password = False
+            
+            db.session.commit()
+            
+            # Crear notificación de confirmación
+            from models.notification import Notification
+            notification = Notification(
+                user_id=g.user.id,
+                type='password_changed',
+                title='Contraseña actualizada',
+                message='Tu contraseña ha sido cambiada exitosamente.',
+                related_type='user',
+                related_id=g.user.id
+            )
+            db.session.add(notification)
+            db.session.commit()
+            
+            flash('¡Contraseña cambiada exitosamente!', 'success')
+            return redirect(url_for('dashboard.index'))
+            
+        except Exception as e:
+            flash(f'Error al cambiar la contraseña: {str(e)}', 'error')
+            db.session.rollback()
+    
+    return render_template('change_password.html')
+
+@auth_bp.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    """Perfil del usuario"""
+    if flask_request.method == 'POST':
+        name = flask_request.form.get('name', '').strip()
+        
+        if not name:
+            flash('El nombre es obligatorio.', 'error')
+            return render_template('profile.html')
+        
+        try:
+            g.user.name = name
+            db.session.commit()
+            
+            # Actualizar sesión
+            session['user_name'] = name
+            
+            flash('Perfil actualizado correctamente.', 'success')
+            
+        except Exception as e:
+            flash(f'Error al actualizar perfil: {str(e)}', 'error')
+            db.session.rollback()
+    
+    return render_template('profile.html')

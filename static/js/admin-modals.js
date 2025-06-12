@@ -1,5 +1,5 @@
 /**
- * JavaScript modular para modales de administrador
+ * JavaScript para modales de administrador
  * Maneja validaciones y lógica específica de admin
  */
 
@@ -104,84 +104,6 @@ class AdminModalsManager {
     populateResetPasswordModal(empId, empName) {
         document.getElementById('resetPasswordUserName').textContent = empName;
         document.getElementById('resetPasswordForm').action = `/admin/employees/${empId}/reset-password`;
-    }
-
-    /**
-     * Mostrar balance detallado de empleado
-     */
-    async showEmployeeBalance(empId, empName) {
-        const modal = document.getElementById('employeeBalanceModal');
-        const content = document.getElementById('employeeBalanceContent');
-        const title = document.getElementById('employeeBalanceModalLabel');
-        
-        if (!modal || !content || !title) return;
-        
-        title.textContent = `Balance de Vacaciones - ${empName}`;
-        content.innerHTML = `
-            <div class="text-center">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Cargando...</span>
-                </div>
-            </div>
-        `;
-        
-        try {
-            const response = await fetch(`/admin/api/employee/${empId}/vacation-balance`);
-            const data = await response.json();
-            
-            if (data.success) {
-                const balance = data.balance;
-                content.innerHTML = `
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="card">
-                                <div class="card-body text-center">
-                                    <div class="h2 text-primary">${balance.total_days}</div>
-                                    <div class="text-muted">Días totales</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card">
-                                <div class="card-body text-center">
-                                    <div class="h2 text-warning">${balance.used_days}</div>
-                                    <div class="text-muted">Días usados</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card">
-                                <div class="card-body text-center">
-                                    <div class="h2 ${balance.is_negative ? 'text-danger' : balance.available_days <= 5 ? 'text-warning' : 'text-success'}">${balance.available_days}</div>
-                                    <div class="text-muted">Días disponibles</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    ${balance.is_negative ? `
-                        <div class="alert alert-danger mt-3">
-                            <i class="ti ti-alert-triangle me-2"></i>
-                            El empleado tiene un balance negativo de días de vacaciones.
-                        </div>
-                    ` : ''}
-                `;
-            } else {
-                content.innerHTML = `
-                    <div class="alert alert-danger mt-3">
-                        <i class="ti ti-alert-triangle me-2"></i>
-                        No se pudo cargar el balance de vacaciones.
-                    </div>
-                `;
-            }
-        } catch (error) {
-            console.error('Error fetching employee balance:', error);
-            content.innerHTML = `
-                <div class="alert alert-danger mt-3">
-                    <i class="ti ti-alert-triangle me-2"></i>
-                    Error al cargar el balance de vacaciones.
-                </div>
-            `;
-        }
     }
 
     /**
@@ -330,27 +252,6 @@ class AdminModalsManager {
     }
 
     /**
-     * Refrescar datos de festivos de un empleado específico
-     */
-    async refreshEmployeeHolidays(userId) {
-        try {
-            const response = await fetch(`/api/employee/${userId}/available-holidays`);
-            if (response.ok) {
-                const data = await response.json();
-                this.employeeHolidaysData.set(userId, data.available_holidays);
-                
-                // Actualizar la interfaz si este empleado está seleccionado
-                const employeeSelect = document.querySelector('#adminCreateRequestModal select[name="user_id"]');
-                if (employeeSelect && employeeSelect.value === userId) {
-                    this.checkEmployeeHolidays();
-                }
-            }
-        } catch (error) {
-            console.error('Error refreshing employee holidays:', error);
-        }
-    }
-
-    /**
      * Limpiar formularios al cerrar modales
      */
     clearModalForms() {
@@ -391,5 +292,132 @@ document.addEventListener('hidden.bs.modal', function(event) {
 });
 
 // ============================================================================
-// FIN DEL ARCHIVO - JAVASCRIPT MODULAR PARA ADMIN MODALS
+// FUNCIONES ESPECÍFICAS PARA EMPLEADOS
 // ============================================================================
+
+function showEditEmployeeModal(empId, name, email, deptId, vacationDays, hireDate, isActive) {
+    if (window.adminModalsManager) {
+        window.adminModalsManager.populateEditEmployeeModal(empId, name, email, deptId, vacationDays, hireDate, isActive);
+    }
+    new bootstrap.Modal(document.getElementById('editEmployeeModal')).show();
+}
+
+function showResetPasswordModal(empId, empName) {
+    if (window.adminModalsManager) {
+        window.adminModalsManager.populateResetPasswordModal(empId, empName);
+    }
+    new bootstrap.Modal(document.getElementById('resetPasswordModal')).show();
+}
+
+function deactivateEmployee(empId, empName) {
+    if (confirm(`¿Desactivar a ${empName}? No podrá acceder al sistema.`)) {
+        fetch(`/admin/employees/${empId}/deactivate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }
+        }).then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Error al desactivar el empleado');
+            }
+        });
+    }
+}
+
+function reactivateEmployee(empId, empName) {
+    if (confirm(`¿Reactivar a ${empName}? Podrá acceder nuevamente al sistema.`)) {
+        fetch(`/admin/employees/${empId}/reactivate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }
+        }).then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Error al reactivar el empleado');
+            }
+        });
+    }
+}
+
+async function showEmployeeBalance(empId, empName) {
+    const modal = document.getElementById('employeeBalanceModal');
+    const content = document.getElementById('employeeBalanceContent');
+    const title = document.getElementById('employeeBalanceModalLabel');
+    
+    title.textContent = `Balance de Vacaciones - ${empName}`;
+    content.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+        </div>
+    `;
+    
+    new bootstrap.Modal(modal).show();
+    
+    try {
+        const response = await fetch(`/admin/api/employee/${empId}/vacation-balance`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const balance = data.balance;
+            content.innerHTML = `
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <div class="h2 text-primary">${balance.total_days}</div>
+                                <div class="text-muted">Días totales</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <div class="h2 text-warning">${balance.used_days}</div>
+                                <div class="text-muted">Días usados</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <div class="h2 ${balance.is_negative ? 'text-danger' : balance.available_days <= 5 ? 'text-warning' : 'text-success'}">${balance.available_days}</div>
+                                <div class="text-muted">Días disponibles</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                ${balance.is_negative ? `
+                    <div class="alert alert-danger mt-3">
+                        <i class="ti ti-alert-triangle me-2"></i>
+                        <strong>Balance negativo:</strong> Este empleado ha usado más días de los asignados para el año ${balance.year}.
+                    </div>
+                ` : ''}
+                
+                <div class="text-center mt-3 text-muted">
+                    <small>Año ${balance.year}</small>
+                </div>
+            `;
+        } else {
+            content.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="ti ti-alert-circle me-2"></i>
+                    Error al cargar el balance: ${data.error || 'Error desconocido'}
+                </div>
+            `;
+        }
+    } catch (error) {
+        content.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="ti ti-wifi-off me-2"></i>
+                Error de conexión. Inténtalo de nuevo.
+            </div>
+        `;
+    }
+}

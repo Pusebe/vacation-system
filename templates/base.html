@@ -84,12 +84,21 @@
                             </div>
                         </a>
                         <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
-                            <div class="dropdown-header">
-                                <span>{{ get_current_user().email if get_current_user() }}</span>
-                                <span class="badge badge-outline text-blue ms-2">
-                                    {% if get_current_user() and get_current_user().is_admin() %}Admin{% else %}Empleado{% endif %}
-                                </span>
-                            </div>
+    <div class="dropdown-header">
+        <span>{{ get_current_user().email if get_current_user() }}</span>
+        <span class="badge badge-outline text-blue ms-2">
+            {% if get_current_user() and get_current_user().is_admin() %}Admin{% else %}Empleado{% endif %}
+        </span>
+    </div>
+                        <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="{{ url_for('auth.profile') }}">
+                                <i class="ti ti-user me-2"></i>
+                                Mi Perfil
+                            </a>
+                            <a class="dropdown-item" href="{{ url_for('auth.change_password') }}">
+                                <i class="ti ti-key me-2"></i>
+                                Cambiar Contraseña
+                            </a>
                             <div class="dropdown-divider"></div>
                             <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
                                 <i class="ti ti-logout me-2"></i>

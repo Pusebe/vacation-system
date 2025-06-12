@@ -271,3 +271,21 @@ def employee_vacation_balance(user_id):
         
     except Exception as e:
         return jsonify({'error': str(e)}), 400
+
+# Reactivar usuario
+
+@admin_bp.route('/employees/<int:user_id>/reactivate', methods=['POST'])
+@admin_required
+def reactivate_employee(user_id):
+    """Reactivar empleado"""
+    user = User.query.get_or_404(user_id)
+    
+    try:
+        user.is_active = True
+        db.session.commit()
+        flash(f'{user.name} ha sido reactivado correctamente.', 'success')
+    except Exception as e:
+        flash(f'Error al reactivar el empleado: {str(e)}', 'error')
+        db.session.rollback()
+    
+    return redirect(url_for('admin.employees'))

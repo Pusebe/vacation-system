@@ -161,10 +161,6 @@ class User(db.Model):
         
         return True, ""
 
-    # ============================================================================
-    # NUEVOS MÉTODOS PARA GESTIÓN DE FESTIVOS Y ESTADÍSTICAS
-    # ============================================================================
-    
     def get_available_holidays_count(self):
         """Obtener número de festivos aprobados disponibles para recuperación"""
         from .holiday import WorkedHoliday
@@ -182,14 +178,6 @@ class User(db.Model):
                 available_count += 1
         
         return available_count
-
-    def get_vacation_days_available(self, year=None):
-        """Calcular días de vacaciones disponibles (22 - usados)"""
-        if not year:
-            year = get_canary_time().year
-        
-        vacation_days_used = self.get_vacation_days_used(year)
-        return max(0, 22 - vacation_days_used)  # 22 días estándar por año
 
     def get_pending_approvals_count(self):
         """Obtener número de solicitudes y festivos pendientes de aprobación"""
@@ -224,184 +212,184 @@ class User(db.Model):
         
         return None
 
-def get_vacation_days_per_year(self, year=None):
-    """Obtener días de vacaciones por año para este usuario"""
-    if self.vacation_days_override is not None:
-        return self.vacation_days_override
-    return self.department.vacation_days_per_year
+    def get_vacation_days_per_year(self, year=None):
+        """Obtener días de vacaciones por año para este usuario"""
+        if self.vacation_days_override is not None:
+            return self.vacation_days_override
+        return self.department.vacation_days_per_year
 
-def get_vacation_days_available(self, year=None):
-    """Calcular días de vacaciones disponibles (puede ser negativo)"""
-    if not year:
-        year = get_canary_time().year
-    
-    vacation_days_total = self.get_vacation_days_per_year(year)
-    vacation_days_used = self.get_vacation_days_used(year)
-    return vacation_days_total - vacation_days_used
+    def get_vacation_days_available(self, year=None):
+        """Calcular días de vacaciones disponibles (puede ser negativo)"""
+        if not year:
+            year = get_canary_time().year
+        
+        vacation_days_total = self.get_vacation_days_per_year(year)
+        vacation_days_used = self.get_vacation_days_used(year)
+        return vacation_days_total - vacation_days_used
 
-def is_vacation_balance_negative(self, year=None):
-    """Verificar si el balance de vacaciones está en negativo"""
-    return self.get_vacation_days_available(year) < 0
+    def is_vacation_balance_negative(self, year=None):
+        """Verificar si el balance de vacaciones está en negativo"""
+        return self.get_vacation_days_available(year) < 0
 
-def get_vacation_balance_info(self, year=None):
-    """Obtener información completa del balance de vacaciones"""
-    if not year:
-        year = get_canary_time().year
-    
-    total_days = self.get_vacation_days_per_year(year)
-    used_days = self.get_vacation_days_used(year)
-    available_days = total_days - used_days
-    
-    return {
-        'total_days': total_days,
-        'used_days': used_days,
-        'available_days': available_days,
-        'is_negative': available_days < 0,
-        'year': year
-    }
+    def get_vacation_balance_info(self, year=None):
+        """Obtener información completa del balance de vacaciones"""
+        if not year:
+            year = get_canary_time().year
+        
+        total_days = self.get_vacation_days_per_year(year)
+        used_days = self.get_vacation_days_used(year)
+        available_days = total_days - used_days
+        
+        return {
+            'total_days': total_days,
+            'used_days': used_days,
+            'available_days': available_days,
+            'is_negative': available_days < 0,
+            'year': year
+        }
 
-def would_exceed_vacation_days(self, start_date, end_date, year=None):
-    """Verificar si una solicitud excedería los días disponibles"""
-    if not year:
-        year = start_date.year if start_date else get_canary_time().year
-    
-    from utils import calculate_vacation_days
-    requested_days = calculate_vacation_days(start_date, end_date)
-    available_days = self.get_vacation_days_available(year)
-    
-    if requested_days > available_days:
-        excess_days = requested_days - available_days
-        return True, excess_days, {
+    def would_exceed_vacation_days(self, start_date, end_date, year=None):
+        """Verificar si una solicitud excedería los días disponibles"""
+        if not year:
+            year = start_date.year if start_date else get_canary_time().year
+        
+        from utils import calculate_vacation_days
+        requested_days = calculate_vacation_days(start_date, end_date)
+        available_days = self.get_vacation_days_available(year)
+        
+        if requested_days > available_days:
+            excess_days = requested_days - available_days
+            return True, excess_days, {
+                'requested_days': requested_days,
+                'available_days': available_days,
+                'would_have_after': available_days - requested_days
+            }
+        
+        return False, 0, {
             'requested_days': requested_days,
             'available_days': available_days,
             'would_have_after': available_days - requested_days
         }
-    
-    return False, 0, {
-        'requested_days': requested_days,
-        'available_days': available_days,
-        'would_have_after': available_days - requested_days
-    }
 
-def update_profile(self, name=None, email=None, department_id=None, role=None, 
-                  vacation_days_override=None, hire_date=None, is_active=None):
-    """Actualizar perfil de usuario (solo admin)"""
-    errors = []
-    
-    if email and email != self.email:
-        # Verificar que el email no esté en uso
-        existing = User.query.filter(
-            User.email == email,
-            User.id != self.id
-        ).first()
-        if existing:
-            errors.append("Ya existe un usuario con ese email")
-        else:
-            self.email = email
-    
-    if name:
-        self.name = name
-    
-    if department_id:
+    def update_profile(self, name=None, email=None, department_id=None, role=None, 
+                      vacation_days_override=None, hire_date=None, is_active=None):
+        """Actualizar perfil de usuario (solo admin)"""
+        errors = []
+        
+        if email and email != self.email:
+            # Verificar que el email no esté en uso
+            existing = User.query.filter(
+                User.email == email,
+                User.id != self.id
+            ).first()
+            if existing:
+                errors.append("Ya existe un usuario con ese email")
+            else:
+                self.email = email
+        
+        if name:
+            self.name = name
+        
+        if department_id:
+            from .department import Department
+            department = Department.query.get(department_id)
+            if not department:
+                errors.append("Departamento no encontrado")
+            else:
+                self.department_id = department_id
+        
+        if role and role in ['admin', 'employee']:
+            self.role = role
+        
+        if vacation_days_override is not None:
+            if vacation_days_override < 0:
+                errors.append("Los días de vacaciones no pueden ser negativos")
+            elif vacation_days_override > 50:
+                errors.append("Los días de vacaciones no pueden superar 50")
+            else:
+                self.vacation_days_override = vacation_days_override
+        
+        if hire_date:
+            self.hire_date = hire_date
+        
+        if is_active is not None:
+            self.is_active = is_active
+        
+        if errors:
+            return False, errors
+        
+        try:
+            db.session.commit()
+            return True, ["Usuario actualizado correctamente"]
+        except Exception as e:
+            db.session.rollback()
+            return False, [f"Error al actualizar: {str(e)}"]
+
+    def can_be_deleted(self):
+        """Verificar si el usuario puede ser eliminado"""
+        # No eliminar si es el único admin
+        if self.is_admin():
+            admin_count = User.query.filter_by(role='admin', is_active=True).count()
+            if admin_count <= 1:
+                return False, "No se puede eliminar: es el único administrador activo"
+        
+        # Verificar solicitudes activas
+        from .request import Request
+        active_requests = Request.query.filter(
+            Request.user_id == self.id,
+            Request.status.in_(['pending', 'approved'])
+        ).count()
+        
+        if active_requests > 0:
+            return False, f"No se puede eliminar: tiene {active_requests} solicitud(es) activa(s)"
+        
+        return True, "Se puede eliminar"
+
+    def deactivate_user(self):
+        """Desactivar usuario en lugar de eliminarlo"""
+        can_delete, message = self.can_be_deleted()
+        if not can_delete:
+            return False, message.replace("eliminar", "desactivar")
+        
+        try:
+            self.is_active = False
+            db.session.commit()
+            return True, "Usuario desactivado correctamente"
+        except Exception as e:
+            db.session.rollback()
+            return False, f"Error al desactivar: {str(e)}"
+
+    @staticmethod
+    def create_employee(name, email, department_id, password="temp123", 
+                       role='employee', vacation_days_override=None, hire_date=None):
+        """Crear nuevo empleado"""
+        # Verificaciones
+        if User.query.filter_by(email=email).first():
+            return None, "Ya existe un usuario con ese email"
+        
         from .department import Department
         department = Department.query.get(department_id)
         if not department:
-            errors.append("Departamento no encontrado")
-        else:
-            self.department_id = department_id
-    
-    if role and role in ['admin', 'employee']:
-        self.role = role
-    
-    if vacation_days_override is not None:
-        if vacation_days_override < 0:
-            errors.append("Los días de vacaciones no pueden ser negativos")
-        elif vacation_days_override > 50:
-            errors.append("Los días de vacaciones no pueden superar 50")
-        else:
-            self.vacation_days_override = vacation_days_override
-    
-    if hire_date:
-        self.hire_date = hire_date
-    
-    if is_active is not None:
-        self.is_active = is_active
-    
-    if errors:
-        return False, errors
-    
-    try:
-        db.session.commit()
-        return True, ["Usuario actualizado correctamente"]
-    except Exception as e:
-        db.session.rollback()
-        return False, [f"Error al actualizar: {str(e)}"]
-
-def can_be_deleted(self):
-    """Verificar si el usuario puede ser eliminado"""
-    # No eliminar si es el único admin
-    if self.is_admin():
-        admin_count = User.query.filter_by(role='admin', is_active=True).count()
-        if admin_count <= 1:
-            return False, "No se puede eliminar: es el único administrador activo"
-    
-    # Verificar solicitudes activas
-    from .request import Request
-    active_requests = Request.query.filter(
-        Request.user_id == self.id,
-        Request.status.in_(['pending', 'approved'])
-    ).count()
-    
-    if active_requests > 0:
-        return False, f"No se puede eliminar: tiene {active_requests} solicitud(es) activa(s)"
-    
-    return True, "Se puede eliminar"
-
-def deactivate_user(self):
-    """Desactivar usuario en lugar de eliminarlo"""
-    can_delete, message = self.can_be_deleted()
-    if not can_delete:
-        return False, message.replace("eliminar", "desactivar")
-    
-    try:
-        self.is_active = False
-        db.session.commit()
-        return True, "Usuario desactivado correctamente"
-    except Exception as e:
-        db.session.rollback()
-        return False, f"Error al desactivar: {str(e)}"
-
-@staticmethod
-def create_employee(name, email, department_id, password="temp123", 
-                   role='employee', vacation_days_override=None, hire_date=None):
-    """Crear nuevo empleado"""
-    # Verificaciones
-    if User.query.filter_by(email=email).first():
-        return None, "Ya existe un usuario con ese email"
-    
-    from .department import Department
-    department = Department.query.get(department_id)
-    if not department:
-        return None, "Departamento no encontrado"
-    
-    if vacation_days_override is not None and (vacation_days_override < 0 or vacation_days_override > 50):
-        return None, "Los días de vacaciones deben estar entre 0 y 50"
-    
-    try:
-        user = User(
-            name=name,
-            email=email,
-            department_id=department_id,
-            role=role,
-            vacation_days_override=vacation_days_override,
-            hire_date=hire_date or date.today(),
-            is_active=True
-        )
-        user.set_password(password)
+            return None, "Departamento no encontrado"
         
-        db.session.add(user)
-        db.session.commit()
-        return user, "Usuario creado correctamente"
-    except Exception as e:
-        db.session.rollback()
-        return None, f"Error al crear: {str(e)}"
+        if vacation_days_override is not None and (vacation_days_override < 0 or vacation_days_override > 50):
+            return None, "Los días de vacaciones deben estar entre 0 y 50"
+        
+        try:
+            user = User(
+                name=name,
+                email=email,
+                department_id=department_id,
+                role=role,
+                vacation_days_override=vacation_days_override,
+                hire_date=hire_date or date.today(),
+                is_active=True
+            )
+            user.set_password(password)
+            
+            db.session.add(user)
+            db.session.commit()
+            return user, "Usuario creado correctamente"
+        except Exception as e:
+            db.session.rollback()
+            return None, f"Error al crear: {str(e)}"

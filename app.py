@@ -84,98 +84,102 @@ def create_app():
     
     # Crear tablas si no existen
     with app.app_context():
-        db.create_all()
+        print("🔧 Iniciando creación de base de datos...")
         
-        # Crear datos iniciales si es la primera vez
-        create_initial_data()
-        
-        # Migrar datos existentes para nuevas columnas
-        migrate_existing_data()
+        try:
+            print("📋 Creando tablas...")
+            db.create_all()
+            print("✅ Tablas creadas exitosamente")
+            
+            print("🔄 Ejecutando migración...")
+            migrate_existing_data()
+            print("✅ Migración completada")
+            
+            print("👥 Creando datos iniciales...")
+            create_initial_data()
+            print("✅ Datos iniciales completados")
+            
+        except Exception as e:
+            print(f"❌ Error durante la inicialización: {e}")
+            import traceback
+            traceback.print_exc()
     
     return app
+    
 
 def create_initial_data():
     """Crear datos iniciales: departamentos y usuario admin"""
     from models import Department, User
-    from werkzeug.security import generate_password_hash
+    from sqlalchemy import text
+    from datetime import date  # ← ESTA LÍNEA FALTABA
     
-    # Verificar si ya hay datos
-    if User.query.first():
-        return
+    try:
+        # Verificar si ya hay datos usando COUNT simple
+        result = db.session.execute(text('SELECT COUNT(*) FROM users')).scalar()
+        if result > 0:
+            print("Ya existen datos en la base de datos")
+            return
+    except Exception as e:
+        print(f"Base de datos vacía o nueva, creando datos iniciales...")
     
     try:
         # Crear departamentos por defecto
-        departments = [
-            Department(name='Administración', max_concurrent_vacations=1, vacation_days_per_year=25),
-            Department(name='Desarrollo', max_concurrent_vacations=1, vacation_days_per_year=22),
-            Department(name='Marketing', max_concurrent_vacations=1, vacation_days_per_year=22),
-            Department(name='Ventas', max_concurrent_vacations=1, vacation_days_per_year=22),
-            Department(name='Recursos Humanos', max_concurrent_vacations=1, vacation_days_per_year=24)
-        ]
+        cap_dept = Department(
+            name='Capitanía', 
+            max_concurrent_vacations=1,
+            vacation_days_per_year=30
+        )
+        mar_dept = Department(
+            name='Marinería', 
+            max_concurrent_vacations=1,
+            vacation_days_per_year=30
+        )
+        lim_dept = Department(
+            name='Limpieza', 
+            max_concurrent_vacations=1,
+            vacation_days_per_year=30
+        )
         
-        for dept in departments:
-            db.session.add(dept)
-        
+        db.session.add(admin_dept)
+        db.session.add(dev_dept)
+        db.session.add(marketing_dept)
         db.session.flush()  # Para obtener los IDs
         
-        # Crear usuario administrador por defecto
+        # Crear usuario administrador
         admin_user = User(
-            email='admin@empresa.com',
-            name='Administrador',
-            department_id=departments[0].id,  # Administración
+            email='amorales@marinalanzarote.com',
+            name='Alfredo',
+            department_id=cap_dept.id,
             role='admin',
             is_active=True,
-            vacation_days_override=30  # Admin tiene más días
+            vacation_days_override=30,
+            hire_date=date.today()
         )
-        admin_user.set_password('admin123')  # Cambiar en primera configuración
-        
+        admin_user.set_password('alfredo')
         db.session.add(admin_user)
         
-        # Crear algunos usuarios de ejemplo
-        example_users = [
-            {
-                'email': 'juan.perez@empresa.com',
-                'name': 'Juan Pérez',
-                'department_id': departments[1].id,  # Desarrollo
-                'password': 'user123',
-                'vacation_days_override': None  # Usa los del departamento
-            },
-            {
-                'email': 'maria.garcia@empresa.com',
-                'name': 'María García',
-                'department_id': departments[2].id,  # Marketing
-                'password': 'user123',
-                'vacation_days_override': 25  # Días personalizados
-            },
-            {
-                'email': 'carlos.lopez@empresa.com',
-                'name': 'Carlos López',
-                'department_id': departments[1].id,  # Desarrollo
-                'password': 'user123',
-                'vacation_days_override': None
-            }
-        ]
-        
-        for user_data in example_users:
-            user = User(
-                email=user_data['email'],
-                name=user_data['name'],
-                department_id=user_data['department_id'],
-                role='employee',
-                is_active=True,
-                vacation_days_override=user_data['vacation_days_override']
-            )
-            user.set_password(user_data['password'])
-            db.session.add(user)
+        # Crear usuario de ejemplo
+        example_user = User(
+            email='juan.perez@empresa.com',
+            name='Juan Pérez',
+            department_id=mar_dept.id,
+            role='employee',
+            is_active=True,
+            vacation_days_override=None,
+            hire_date=date.today()
+        )
+        example_user.set_password('user123')
+        db.session.add(example_user)
         
         db.session.commit()
         print("Datos iniciales creados correctamente")
         print("Usuario admin: admin@empresa.com / admin123")
-        print("Usuarios ejemplo: juan.perez@empresa.com / user123")
+        print("Usuario ejemplo: juan.perez@empresa.com / user123")
         
     except Exception as e:
         db.session.rollback()
         print(f"Error creando datos iniciales: {e}")
+        # No hacer raise para que la app continúe
 
 def migrate_existing_data():
     """Migrar datos existentes para añadir nuevas columnas"""
