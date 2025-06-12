@@ -146,53 +146,38 @@ class WorkedHoliday(db.Model):
         }
         return status_text.get(self.status, 'Desconocido')
     
+    # En models/holiday.py - Reemplazar el método is_available_for_recovery():
     def is_available_for_recovery(self):
-        """Verificar si el festivo está disponible para crear recuperación"""
-        # Solo los festivos aprobados pueden usarse para recuperación
+        """Verificar si está disponible para recuperación - excluye completados"""
         if self.status != 'approved':
-            return False, "El festivo debe estar aprobado para poder solicitar recuperación."
+            return False, "El festivo debe estar aprobado para solicitar recuperación."
         
-        # Verificar que no se haya usado ya para recuperación
-        from .request import Request
-        existing_recovery = Request.query.filter(
-            Request.user_id == self.user_id,
-            Request.type == 'recovery',
-            Request.status.in_(['pending', 'approved']),
-            Request.reason.like(f'%festivo trabajado el {self.date}%')
-        ).first()
-        
-        if existing_recovery:
-            status_text = existing_recovery.get_status_text().lower()
-            return False, f"Ya tienes una solicitud de recuperación {status_text} para este festivo."
+        # Verificar si ya está completado
+        recovery_status, recovery_request = self.get_recovery_status()
+        if recovery_status:
+            if '[COMPLETADO' in (self.description or ''):
+                return False, "Este festivo ya ha sido usado para una recuperación."
+            else:
+                status_text = recovery_request.get_status_text().lower() if recovery_request else 'procesado'
+                return False, f"Ya tienes una recuperación {status_text} para este festivo."
         
         return True, "Disponible para recuperación"
-    
+
     def has_pending_or_approved_recovery(self):
-        """Verificar si ya tiene una recuperación pendiente o aprobada"""
-        from .request import Request
-        
-        # Buscar por el texto correcto que se guarda en la base de datos
-        search_text = f"festivo trabajado el {self.date}"
-        print(f"Verificando festivo {self.date} del usuario {self.user_id}")
-        print(f"  - Buscando texto: '{search_text}'")
-        
-        existing_recovery = Request.query.filter(
-            Request.user_id == self.user_id,
-            Request.type == 'recovery',
-            Request.status.in_(['pending', 'approved']),
-            Request.reason.like(f'%{search_text}%')
-        ).first()
-        
-        if existing_recovery:
-            print(f"  - ✅ Encontrada recuperación: {existing_recovery.id} - Estado: {existing_recovery.status}")
-            return True
-        else:
-            print(f"  - ❌ No se encontró recuperación para este festivo")
-            return False
-    
+        """Verificar si tiene recuperación o está completado"""
+        recovery_status, _ = self.get_recovery_status()
+        return recovery_status is not None
+# En models/holiday.py - Reemplazar el método get_recovery_status():
+
     def get_recovery_status(self):
-        """Obtener el estado de la recuperación si existe"""
+        """Obtener el estado de la recuperación - detecta COMPLETADO"""
         from .request import Request
+        
+        # Verificar si está marcado como COMPLETADO en la descripción
+        if self.description and '[COMPLETADO' in self.description:
+            return 'approved', None  # Lo consideramos como recuperación aprobada/completada
+        
+        # Buscar recuperación real en solicitudes
         existing_recovery = Request.query.filter(
             Request.user_id == self.user_id,
             Request.type == 'recovery',
@@ -202,8 +187,9 @@ class WorkedHoliday(db.Model):
         
         if existing_recovery:
             return existing_recovery.status, existing_recovery
+        
         return None, None
-    
+
     def create_recovery_request(self, recovery_date, reason=None):
         """Crear una solicitud de recuperación usando este festivo (solo 1 día)"""
         from .request import Request

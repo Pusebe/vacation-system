@@ -3,7 +3,6 @@ from utils import login_required, admin_required, create_notifications_for_new_h
 from models import db, WorkedHoliday, Request, Department, User
 from datetime import datetime
 
-
 holidays_bp = Blueprint('holidays', __name__)
 
 @holidays_bp.route('/holidays')
@@ -27,22 +26,35 @@ def index():
         my_holidays = g.user.get_worked_holidays()
         
         # TODOS los festivos aprobados (para mostrar en la tabla)
-        approved_holidays = [h for h in my_holidays if h.status == 'approved']
+        approved_holidays = WorkedHoliday.query.filter_by(
+            user_id=g.user.id,
+            status='approved'
+        ).order_by(WorkedHoliday.date.desc()).all()
         
-        # Solo festivos aprobados SIN recuperación asociada (para el contador verde)
-        available_for_recovery = []
-        for holiday in approved_holidays:
-            recovery_status, _ = holiday.get_recovery_status()
-            if not recovery_status:  # No tiene recuperación asociada
-                available_for_recovery.append(holiday)
+        # Solo festivos aprobados SIN recuperación asociada (para el contador)
+        available_holidays = WorkedHoliday.query.filter_by(
+            user_id=g.user.id,
+            status='approved'
+        ).filter(
+            ~WorkedHoliday.id.in_(
+                db.session.query(Request.worked_holiday_id).filter(
+                    Request.worked_holiday_id.isnot(None),
+                    Request.status.in_(['pending', 'approved'])
+                )
+            )
+        ).all()
+        
+        print(f"🔍 Vista empleado {g.user.name}:")
+        print(f"  - Total festivos aprobados: {len(approved_holidays)}")
+        print(f"  - Festivos disponibles: {len(available_holidays)}")
         
         return render_template('holidays.html',
-                             is_admin=False,
-                             my_holidays=my_holidays,
-                             approved_holidays=approved_holidays,
-                             available_for_recovery=available_for_recovery,
-                             available_count=len(available_for_recovery),
-                             common_holidays=WorkedHoliday.get_common_holidays())
+                            is_admin=False,
+                            my_holidays=my_holidays,
+                            approved_holidays=approved_holidays,
+                            available_for_recovery=available_holidays,
+                            available_count=len(available_holidays),
+                            common_holidays=WorkedHoliday.get_common_holidays())
 
 @holidays_bp.route('/holidays', methods=['POST'])
 @login_required

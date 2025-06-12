@@ -80,29 +80,38 @@ class DateRangeManager {
 
     /**
      * Configurar triggers para abrir overlay de rango
-     * @private
      */
     _setupOverlayTriggers(startEl, endEl, config) {
-        // Al hacer clic en cualquier input → prevenir nativo y abrir overlay
+        // DETECTAR SI ES MÓVIL - en móvil usar inputs nativos
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                         window.innerWidth <= 768;
+        
+        if (isMobile) {
+            console.log('Dispositivo móvil detectado - usando inputs nativos');
+            // En móvil: permitir que funcionen los inputs nativos normalmente
+            return;
+        }
+        
+        // Solo en desktop: interceptar y mostrar overlay
+        const self = this;
         [startEl, endEl].forEach(input => {
             input.addEventListener('focus', (e) => {
                 e.preventDefault();
-                input.blur(); // Quitar foco para evitar calendario nativo
+                input.blur();
                 setTimeout(() => {
-                    this._showRangeOverlay(startEl, endEl, config);
+                    self._showRangeOverlay(startEl, endEl, config);
                 }, 50);
             });
             
             input.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                input.blur(); // Quitar foco inmediatamente
+                input.blur();
                 setTimeout(() => {
-                    this._showRangeOverlay(startEl, endEl, config);
+                    self._showRangeOverlay(startEl, endEl, config);
                 }, 50);
             });
 
-            // También prevenir en mousedown para asegurar
             input.addEventListener('mousedown', (e) => {
                 e.preventDefault();
             });
@@ -111,10 +120,9 @@ class DateRangeManager {
 
     /**
      * Configurar validación en inputs nativos
-     * @private
      */
     _setupNativeValidation(startEl, endEl, config) {
-        // Validar cuando cambian los inputs nativos (por si el usuario escribe directamente)
+        // Validar cuando cambian los inputs nativos
         [startEl, endEl].forEach(input => {
             input.addEventListener('change', () => {
                 this._validateRange(config);
@@ -124,7 +132,6 @@ class DateRangeManager {
 
     /**
      * Mostrar overlay de selección de rango
-     * @private
      */
     _showRangeOverlay(startEl, endEl, config) {
         // Destruir overlay anterior si existe
@@ -153,7 +160,6 @@ class DateRangeManager {
                 this._handleOverlaySelection(selectedDates, startEl, endEl, config);
             },
             onClose: () => {
-                // Limpiar overlay cuando se cierra
                 setTimeout(() => {
                     if (this.overlayPicker) {
                         this.overlayPicker.destroy();
@@ -178,7 +184,6 @@ class DateRangeManager {
 
     /**
      * Obtener fechas por defecto para el overlay
-     * @private
      */
     _getDefaultDates(startEl, endEl, type) {
         const dates = [];
@@ -196,7 +201,6 @@ class DateRangeManager {
 
     /**
      * Posicionar overlay cerca del input
-     * @private
      */
     _positionOverlay(inputEl) {
         if (!this.overlayPicker || !this.overlayPicker.calendarContainer) return;
@@ -212,7 +216,6 @@ class DateRangeManager {
 
     /**
      * Manejar selección en overlay y poblar inputs nativos
-     * @private
      */
     _handleOverlaySelection(selectedDates, startEl, endEl, config) {
         if (config.type === 'recovery') {
@@ -256,7 +259,6 @@ class DateRangeManager {
 
     /**
      * Formatear fecha para input type="date"
-     * @private
      */
     _formatDate(date) {
         const year = date.getFullYear();
@@ -267,7 +269,6 @@ class DateRangeManager {
 
     /**
      * Validar rango usando los valores de inputs nativos
-     * @private
      */
     async _validateRange(config) {
         const { startInput, endInput, type } = config;
@@ -318,7 +319,6 @@ class DateRangeManager {
 
     /**
      * Validar con API del backend
-     * @private
      */
     async _validateWithAPI(startDate, endDate, type, startEl, endEl, validationDiv, submitBtn) {
         try {
@@ -334,7 +334,6 @@ class DateRangeManager {
 
     /**
      * Establecer estado de validación
-     * @private
      */
     _setValidationState(isValid, message, startEl, endEl, validationDiv, submitBtn) {
         // Actualizar div de validación
@@ -352,7 +351,6 @@ class DateRangeManager {
 
     /**
      * Limpiar estado de validación
-     * @private
      */
     _clearValidationState(startEl, endEl, validationDiv, submitBtn) {
         if (validationDiv) {
@@ -370,7 +368,6 @@ class DateRangeManager {
     destroyRange(rangeId) {
         const instance = this.instances.get(rangeId);
         if (instance) {
-            // Solo limpiar eventos, no tocar los inputs nativos
             this.instances.delete(rangeId);
             this.validators.delete(rangeId);
         }
@@ -570,7 +567,3 @@ window.validateVacationDates = function() {
 window.toggleRequestType = function() {
     window.validateDates();
 };
-
-// ============================================================================
-// FIN DEL ARCHIVO - HÍBRIDO INPUTS NATIVOS + OVERLAY DE RANGO 
-// ============================================================================

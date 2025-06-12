@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request as flask_request, redirect, url_for, flash, g, jsonify
 from utils import login_required, admin_required, create_notifications_for_new_request
-from models import db, Request, User, Department
+from models import db, Request, User, Department, WorkedHoliday
 from datetime import datetime
 
 requests_bp = Blueprint('requests', __name__)
@@ -10,7 +10,6 @@ requests_bp = Blueprint('requests', __name__)
 def index():
     """Lista de solicitudes"""
     if g.user.is_admin():
-        # Admin ve todas las solicitudes
         all_requests = Request.query.order_by(Request.created_at.desc()).all()
         pending_requests = Request.query.filter_by(status='pending').order_by(Request.created_at.desc()).all()
         departments = Department.query.all()
@@ -21,7 +20,6 @@ def index():
                              pending_requests=pending_requests,
                              departments=departments)
     else:
-        # Empleado ve solo sus solicitudes
         my_requests = g.user.get_vacation_requests()
         my_recovery_requests = g.user.get_recovery_requests()
         
@@ -35,34 +33,12 @@ def index():
 def create():
     """Crear nueva solicitud"""
     try:
-        # Obtener datos del formulario
-        request_type = flask_request.form.get('type')  # 'vacation' o 'recovery'
+        request_type = flask_request.form.get('type')
         start_date = datetime.strptime(flask_request.form.get('start_date'), '%Y-%m-%d').date()
         end_date = datetime.strptime(flask_request.form.get('end_date'), '%Y-%m-%d').date()
         reason = flask_request.form.get('reason', '').strip()
         
-        # VALIDACIÓN: Recovery solo desde /holidays o admin con festivos disponibles
-        if request_type == 'recovery':
-            # Si no es admin, rechazar directamente
-            if not g.user.is_admin():
-                flash('Las recuperaciones solo se pueden solicitar desde la página de festivos.', 'error')
-                return redirect(url_for('requests.index'))
-            
-            # Si es admin, verificar que el empleado tenga festivos disponibles
-            if flask_request.form.get('user_id'):
-                user_id = int(flask_request.form.get('user_id'))
-                target_user = User.query.get_or_404(user_id)
-                
-                if target_user.get_available_holidays_count() == 0:
-                    flash(f'{target_user.name} no tiene festivos disponibles para recuperación.', 'error')
-                    return redirect(url_for('requests.index'))
-            else:
-                # Si es para sí mismo y no tiene festivos
-                if g.user.get_available_holidays_count() == 0:
-                    flash('No tienes festivos disponibles para recuperación.', 'error')
-                    return redirect(url_for('requests.index'))
-        
-        # Si es admin y especifica user_id, crear para otro usuario
+        # Si es admin creando para otro usuario
         if g.user.is_admin() and flask_request.form.get('user_id'):
             user_id = int(flask_request.form.get('user_id'))
             target_user = User.query.get_or_404(user_id)
@@ -72,55 +48,95 @@ def create():
             target_user = g.user
             auto_approve = False
         
+        # ✅ PARA RECOVERY: El admin debe especificar QUÉ festivo usar
+        worked_holiday_id = None
+        if request_type == 'recovery':
+            # El admin debe pasar el ID del festivo a usar
+            holiday_id = flask_request.form.get('worked_holiday_id')
+            if not holiday_id:
+                flash('Debes seleccionar qué festivo usar para la recuperación.', 'error')
+                return redirect(url_for('requests.index'))
+            
+            # Verificar que el festivo existe y está disponible
+            holiday = WorkedHoliday.query.filter_by(
+                id=int(holiday_id),
+                user_id=user_id,
+                status='approved'
+            ).first()
+            
+            if not holiday:
+                flash('El festivo seleccionado no existe o no está disponible.', 'error')
+                return redirect(url_for('requests.index'))
+            
+            # Verificar que no esté ya usado
+            existing_recovery = Request.query.filter(
+                Request.worked_holiday_id == holiday.id,
+                Request.status.in_(['pending', 'approved'])
+            ).first()
+            
+            if existing_recovery:
+                flash(f'El festivo del {holiday.date.strftime("%d/%m/%Y")} ya está siendo usado para otra recuperación.', 'error')
+                return redirect(url_for('requests.index'))
+            
+            worked_holiday_id = holiday.id
+            
+            # Recovery debe ser 1 día
+            if start_date != end_date:
+                flash('Las recuperaciones solo pueden ser de 1 día.', 'error')
+                return redirect(url_for('requests.index'))
+            
+            # Agregar info del festivo al reason (igual que hace el empleado)
+            reason = f"Recuperación por festivo trabajado el {holiday.date.strftime('%d/%m/%Y')}: {holiday.description or 'Sin descripción'}"
+            if flask_request.form.get('reason'):
+                reason += f"\n\nMotivo adicional: {flask_request.form.get('reason')}"
+        
+        # ✅ PARA VACATION: Solo verificar conflicto con otras vacaciones
+        elif request_type == 'vacation':
+            vacation_conflict = Request.query.filter(
+                Request.user_id == user_id,
+                Request.type == 'vacation',
+                Request.status.in_(['pending', 'approved']),
+                Request.start_date <= end_date,
+                Request.end_date >= start_date
+            ).first()
+            
+            if vacation_conflict:
+                overlap_dates = f"{vacation_conflict.start_date.strftime('%d/%m/%Y')}"
+                if vacation_conflict.start_date != vacation_conflict.end_date:
+                    overlap_dates += f" a {vacation_conflict.end_date.strftime('%d/%m/%Y')}"
+                
+                error_msg = f"Las vacaciones se solapan con otras vacaciones {vacation_conflict.get_status_text().lower()} del {overlap_dates}."
+                flash(error_msg, 'error')
+                return redirect(url_for('requests.index'))
+        
         # Crear la solicitud
         new_request = Request(
             user_id=user_id,
             type=request_type,
             start_date=start_date,
             end_date=end_date,
-            reason=reason
+            reason=reason,
+            worked_holiday_id=worked_holiday_id  # ✅ Vinculado al festivo si es recovery
         )
         
-        # Validar usando el fat model (diferentes validaciones para admin vs empleado)
-        if not auto_approve:
-            if g.user.is_admin() and flask_request.form.get('user_id'):
-                # Admin creando para otro usuario - usar validación relajada
-                errors = new_request.validate_for_admin()
-            else:
-                # Empleado creando para sí mismo - validación completa
-                errors = new_request.validate()
-                
-            if errors:
-                for error in errors:
-                    flash(error, 'error')
-                return redirect(url_for('requests.index'))
-        
-        # Guardar en base de datos
         db.session.add(new_request)
         db.session.commit()
         
-        # Si es admin y auto_approve, aprobar inmediatamente
         if auto_approve:
             success, message = new_request.approve(g.user)
             if success:
-                # Si es recovery, descontar festivo disponible
-                if request_type == 'recovery':
-                    used_holiday = target_user.use_available_holiday()
-                    if used_holiday:
-                        db.session.commit()
-                        flash(f'Solicitud de recuperación creada y aprobada para {target_user.name}. Se ha descontado 1 festivo.', 'success')
-                    else:
-                        flash(f'Solicitud aprobada pero no se pudo descontar festivo.', 'warning')
-                else:
-                    flash(f'Solicitud creada y aprobada para {target_user.name}.', 'success')
+                flash(f'Solicitud de {new_request.get_type_text().lower()} creada y aprobada para {target_user.name}.', 'success')
             else:
-                flash(f'Solicitud creada pero error al aprobar: {message}', 'warning')
+                if isinstance(message, list):
+                    for error in message:
+                        flash(error, 'error')
+                else:
+                    flash(f'Error al aprobar: {message}', 'error')
         else:
-            # Crear notificaciones para administradores
             create_notifications_for_new_request(new_request)
             flash(f'Solicitud de {new_request.get_type_text().lower()} creada correctamente.', 'success')
         
-    except ValueError as e:
+    except ValueError:
         flash('Error en el formato de las fechas.', 'error')
     except Exception as e:
         flash(f'Error al crear la solicitud: {str(e)}', 'error')
@@ -131,14 +147,45 @@ def create():
 @requests_bp.route('/requests/<int:request_id>/approve', methods=['POST'])
 @admin_required
 def approve(request_id):
-    """Aprobar solicitud"""
+    """Aprobar solicitud existente"""
     request_obj = Request.query.get_or_404(request_id)
     
-    # Usar método del fat model
+    # VACACIONES: Verificar conflictos antes de aprobar
+    if request_obj.type == 'vacation':
+        vacation_conflict = Request.query.filter(
+            Request.user_id == request_obj.user_id,
+            Request.type == 'vacation',
+            Request.status.in_(['pending', 'approved']),
+            Request.start_date <= request_obj.end_date,
+            Request.end_date >= request_obj.start_date,
+            Request.id != request_obj.id
+        ).first()
+        
+        if vacation_conflict:
+            overlap_dates = f"{vacation_conflict.start_date.strftime('%d/%m/%Y')}"
+            if vacation_conflict.start_date != vacation_conflict.end_date:
+                overlap_dates += f" a {vacation_conflict.end_date.strftime('%d/%m/%Y')}"
+            
+            error_msg = f"No se puede aprobar: {request_obj.user.name} ya tiene vacaciones {vacation_conflict.get_status_text().lower()} del {overlap_dates}."
+            flash(error_msg, 'error')
+            return redirect(url_for('requests.index'))
+    
+    # RECOVERY: Verificar que el festivo vinculado siga disponible
+    elif request_obj.type == 'recovery':
+        if request_obj.worked_holiday_id:
+            holiday = WorkedHoliday.query.get(request_obj.worked_holiday_id)
+            if not holiday or holiday.status != 'approved':
+                flash(f"No se puede aprobar: el festivo vinculado ya no está disponible.", 'error')
+                return redirect(url_for('requests.index'))
+        else:
+            flash(f"No se puede aprobar: solicitud de recuperación sin festivo vinculado.", 'error')
+            return redirect(url_for('requests.index'))
+    
+    # Aprobar
     success, message = request_obj.approve(g.user)
     
     if success:
-        flash(message, 'success')
+        flash(f'Solicitud de {request_obj.get_type_text().lower()} aprobada para {request_obj.user.name}.', 'success')
     else:
         if isinstance(message, list):
             for error in message:
@@ -151,11 +198,9 @@ def approve(request_id):
 @requests_bp.route('/requests/<int:request_id>/reject', methods=['POST'])
 @admin_required
 def reject(request_id):
-    """Rechazar solicitud"""
     request_obj = Request.query.get_or_404(request_id)
     reject_reason = flask_request.form.get('reason', '').strip()
     
-    # Usar método del fat model
     success, message = request_obj.reject(g.user, reject_reason)
     
     if success:
@@ -168,20 +213,16 @@ def reject(request_id):
 @requests_bp.route('/requests/<int:request_id>/cancel', methods=['POST'])
 @login_required
 def cancel(request_id):
-    """Cancelar solicitud"""
     request_obj = Request.query.get_or_404(request_id)
     
-    # Verificar que sea el dueño de la solicitud o admin
     if request_obj.user_id != g.user.id and not g.user.is_admin():
         flash('No tienes permisos para cancelar esta solicitud.', 'error')
         return redirect(url_for('requests.index'))
     
-    # Verificar si se puede cancelar usando fat model
     if not request_obj.can_be_cancelled():
         flash('Esta solicitud no se puede cancelar.', 'error')
         return redirect(url_for('requests.index'))
     
-    # Usar método del fat model
     success, message = request_obj.cancel()
     
     if success:
@@ -194,11 +235,9 @@ def cancel(request_id):
 @requests_bp.route('/requests/<int:request_id>/edit', methods=['POST'])
 @admin_required
 def edit(request_id):
-    """Editar solicitud (solo admin)"""
     request_obj = Request.query.get_or_404(request_id)
     
     try:
-        # Obtener datos del formulario
         updates = {}
         
         if flask_request.form.get('type'):
@@ -216,7 +255,6 @@ def edit(request_id):
         if flask_request.form.get('status'):
             updates['status'] = flask_request.form.get('status')
         
-        # Usar método del fat model
         success, message = request_obj.update(g.user, **updates)
         
         if success:
@@ -234,11 +272,9 @@ def edit(request_id):
 @requests_bp.route('/requests/<int:request_id>/delete', methods=['POST'])
 @admin_required
 def delete(request_id):
-    """Eliminar solicitud (solo admin)"""
     request_obj = Request.query.get_or_404(request_id)
     user_name = request_obj.user.name
     
-    # Usar método del fat model
     success, message = request_obj.delete()
     
     if success:

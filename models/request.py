@@ -27,6 +27,8 @@ class Request(db.Model):
     def __repr__(self):
         return f'<Request {self.type} {self.user.name} {self.start_date}-{self.end_date}>'
     
+# En models/request.py - Reemplazar el método validate() (línea ~35 aprox):
+
     def validate(self):
         """Validar la solicitud antes de guardar"""
         errors = []
@@ -48,6 +50,18 @@ class Request(db.Model):
             errors.append("Usuario no encontrado.")
             return errors
         
+        # ✅ VERIFICAR SOLAPAMIENTO CON INFORMACIÓN ESPECÍFICA
+        overlapping_request = user.get_overlapping_request(self.start_date, self.end_date, self.id)
+        if overlapping_request:
+            overlap_dates = f"{overlapping_request.start_date.strftime('%d/%m/%Y')}"
+            if overlapping_request.start_date != overlapping_request.end_date:
+                overlap_dates += f" a {overlapping_request.end_date.strftime('%d/%m/%Y')}"
+            
+            overlap_type = overlapping_request.get_type_text().lower()
+            overlap_status = overlapping_request.get_status_text().lower()
+            
+            errors.append(f"Las fechas se solapan con tu {overlap_type} {overlap_status} del {overlap_dates}.")
+        
         # Validaciones específicas por tipo
         if self.type == 'vacation':
             can_request, error_msg = user.can_request_vacation(self.start_date, self.end_date, self.id)
@@ -58,21 +72,9 @@ class Request(db.Model):
         elif self.type == 'recovery':
             if self.start_date != self.end_date:
                 errors.append("Las recuperaciones solo pueden ser de 1 día.")
-                
-            if user.has_overlapping_requests(self.start_date, self.end_date, self.id):
-                errors.append("Ya tienes una solicitud para fechas que se solapan con estas.")
-                
-            # Si tiene worked_holiday_id, verificar que el festivo esté disponible
-            if self.worked_holiday_id:
-                from .holiday import WorkedHoliday
-                holiday = WorkedHoliday.query.get(self.worked_holiday_id)
-                if holiday and holiday.user_id != self.user_id:
-                    errors.append("No puedes usar un festivo de otro usuario.")
-                if holiday and holiday.status != 'approved':
-                    errors.append("Solo puedes usar festivos aprobados para recuperación.")
         
         return errors
-    
+        
     def calculate_days(self):
         """Calcular número de días de la solicitud"""
         return calculate_vacation_days(self.start_date, self.end_date)

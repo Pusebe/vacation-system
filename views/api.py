@@ -386,3 +386,6 @@ def department_stats(dept_id):
     })
     
     return jsonify(stats)
+
+
+    

@@ -22,7 +22,6 @@ class AdminModalsManager {
      * Configurar modales de departamentos
      */
     setupDepartmentModals() {
-        // Modal de editar departamento
         const editDeptModal = document.getElementById('editDepartmentModal');
         if (editDeptModal) {
             editDeptModal.addEventListener('show.bs.modal', (event) => {
@@ -41,7 +40,6 @@ class AdminModalsManager {
      * Configurar modales de empleados
      */
     setupEmployeeModals() {
-        // Modal de editar empleado
         const editEmpModal = document.getElementById('editEmployeeModal');
         if (editEmpModal) {
             editEmpModal.addEventListener('show.bs.modal', (event) => {
@@ -60,7 +58,6 @@ class AdminModalsManager {
             });
         }
 
-        // Modal de resetear contraseña
         const resetPasswordModal = document.getElementById('resetPasswordModal');
         if (resetPasswordModal) {
             resetPasswordModal.addEventListener('show.bs.modal', (event) => {
@@ -79,31 +76,70 @@ class AdminModalsManager {
      * Poblar modal de editar departamento
      */
     populateEditDepartmentModal(deptId, deptName, maxConcurrent, vacationDays) {
-        document.getElementById('editDepartmentForm').action = `/admin/departments/${deptId}/edit`;
-        document.getElementById('editDeptName').value = deptName;
-        document.getElementById('editDeptMaxConcurrent').value = maxConcurrent;
-        document.getElementById('editDeptVacationDays').value = vacationDays;
+        const editDepartmentForm = document.getElementById('editDepartmentForm');
+        if (editDepartmentForm) {
+            editDepartmentForm.action = `/admin/departments/${deptId}/edit`;
+        }
+        const editDeptName = document.getElementById('editDeptName');
+        if (editDeptName) {
+            editDeptName.value = deptName;
+        }
+        const editDeptMaxConcurrent = document.getElementById('editDeptMaxConcurrent');
+        if (editDeptMaxConcurrent) {
+            editDeptMaxConcurrent.value = maxConcurrent;
+        }
+        const editDeptVacationDays = document.getElementById('editDeptVacationDays');
+        if (editDeptVacationDays) {
+            editDeptVacationDays.value = vacationDays;
+        }
     }
 
     /**
      * Poblar modal de editar empleado
      */
     populateEditEmployeeModal(empId, empName, empEmail, deptId, vacationDays, hireDate, isActive) {
-        document.getElementById('editEmployeeForm').action = `/admin/employees/${empId}/edit`;
-        document.getElementById('editEmpName').value = empName;
-        document.getElementById('editEmpEmail').value = empEmail;
-        document.getElementById('editEmpDepartment').value = deptId;
-        document.getElementById('editEmpVacationDays').value = vacationDays === 'null' ? '' : vacationDays;
-        document.getElementById('editEmpHireDate').value = hireDate;
-        document.getElementById('editEmpActive').value = isActive ? '1' : '0';
+        const editEmployeeForm = document.getElementById('editEmployeeForm');
+        if (editEmployeeForm) {
+            editEmployeeForm.action = `/admin/employees/${empId}/edit`;
+        }
+        const editEmpName = document.getElementById('editEmpName');
+        if (editEmpName) {
+            editEmpName.value = empName;
+        }
+        const editEmpEmail = document.getElementById('editEmpEmail');
+        if (editEmpEmail) {
+            editEmpEmail.value = empEmail;
+        }
+        const editEmpDepartment = document.getElementById('editEmpDepartment');
+        if (editEmpDepartment) {
+            editEmpDepartment.value = deptId;
+        }
+        const editEmpVacationDays = document.getElementById('editEmpVacationDays');
+        if (editEmpVacationDays) {
+            editEmpVacationDays.value = vacationDays === 'null' ? '' : vacationDays;
+        }
+        const editEmpHireDate = document.getElementById('editEmpHireDate');
+        if (editEmpHireDate) {
+            editEmpHireDate.value = hireDate;
+        }
+        const editEmpActive = document.getElementById('editEmpActive');
+        if (editEmpActive) {
+            editEmpActive.value = isActive ? '1' : '0';
+        }
     }
 
     /**
      * Poblar modal de resetear contraseña
      */
     populateResetPasswordModal(empId, empName) {
-        document.getElementById('resetPasswordUserName').textContent = empName;
-        document.getElementById('resetPasswordForm').action = `/admin/employees/${empId}/reset-password`;
+        const resetPasswordUserName = document.getElementById('resetPasswordUserName');
+        if (resetPasswordUserName) {
+            resetPasswordUserName.textContent = empName;
+        }
+        const resetPasswordForm = document.getElementById('resetPasswordForm');
+        if (resetPasswordForm) {
+            resetPasswordForm.action = `/admin/employees/${empId}/reset-password`;
+        }
     }
 
     /**
@@ -114,10 +150,8 @@ class AdminModalsManager {
         const typeSelect = document.querySelector('#adminCreateRequestModal select[name="type"]');
         
         if (employeeSelect) {
-            // Cargar datos de festivos disponibles
             this.loadEmployeesHolidaysData(employeeSelect);
             
-            // Configurar eventos
             employeeSelect.addEventListener('change', () => {
                 this.checkEmployeeHolidays();
             });
@@ -141,7 +175,6 @@ class AdminModalsManager {
             });
         }
 
-        // Toggle para descripción personalizada
         const descSelect = document.querySelector('#adminCreateHolidayModal select[name="description"]');
         if (descSelect) {
             descSelect.addEventListener('change', () => {
@@ -187,27 +220,104 @@ class AdminModalsManager {
      * Actualizar opción de recovery según festivos disponibles
      */
     updateRecoveryOption(recoveryOption, typeSelect, holidayWarning, availableHolidays, customMessage = null) {
+        console.log(`🔍 Actualizando recovery option: ${availableHolidays} festivos disponibles`);
+        
+        const holidaySelector = document.getElementById('holidaySelector');
+        
         if (availableHolidays > 0) {
             recoveryOption.disabled = false;
             recoveryOption.textContent = `Recuperación de festivo (${availableHolidays} disponibles)`;
+            recoveryOption.style.color = '#2fb344'; // Verde
+            console.log('✅ Recovery option habilitada');
         } else {
             recoveryOption.disabled = true;
             recoveryOption.textContent = customMessage || 'Recuperación de festivo (sin festivos disponibles)';
+            recoveryOption.style.color = '#dc3545'; // Rojo
+            console.log('❌ Recovery option deshabilitada - sin festivos');
             
-            // Si tenía recovery seleccionado, cambiar a vacation
             if (typeSelect.value === 'recovery') {
+                console.log('🔄 Cambiando de recovery a vacation automáticamente');
                 typeSelect.value = 'vacation';
+                
+                const tempAlert = document.createElement('div');
+                tempAlert.className = 'alert alert-warning alert-dismissible mt-2';
+                tempAlert.innerHTML = `
+                    <i class="ti ti-alert-triangle me-2"></i>
+                    <strong>Sin festivos:</strong> El empleado no tiene festivos disponibles para recuperación.
+                    <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+                `;
+                
+                typeSelect.parentNode.appendChild(tempAlert);
+                
+                setTimeout(() => {
+                    if (tempAlert.parentNode) {
+                        tempAlert.remove();
+                    }
+                }, 8000);
             }
         }
 
-        // Mostrar/ocultar warning
+        if (holidaySelector) {
+            if (typeSelect.value === 'recovery' && availableHolidays > 0) {
+                holidaySelector.classList.remove('d-none');
+                this.loadEmployeeHolidays();
+            } else {
+                holidaySelector.classList.add('d-none');
+            }
+        }
+
         if (holidayWarning) {
             if (typeSelect.value === 'recovery' && availableHolidays > 0) {
                 holidayWarning.style.display = 'block';
+                const alertDiv = holidayWarning.querySelector('.alert');
+                if (alertDiv) {
+                    alertDiv.innerHTML = `
+                        <i class="ti ti-alert-triangle me-2"></i>
+                        <strong>Atención:</strong> Al aprobar esta recuperación se marcará el festivo seleccionado como usado.
+                        <br><small class="text-muted">Festivos disponibles: ${availableHolidays}</smallbri>
+                    `;
+                }
+                console.log('⚠️ Warning de uso de festivo mostrado');
             } else {
                 holidayWarning.style.display = 'none';
+                console.log('ℹ️ Warning ocultado');
             }
         }
+    }
+
+    /**
+     * Cargar festivos disponibles del empleado seleccionado
+     */
+    loadEmployeeHolidays() {
+        const employeeSelect = document.querySelector('#adminCreateRequestModal select[name="user_id"]');
+        const holidaySelect = document.getElementById('holidaySelect');
+        
+        if (!employeeSelect || !employeeSelect.value || !holidaySelect) return;
+        
+        const userId = employeeSelect.value;
+        
+        holidaySelect.innerHTML = '<option value="">Cargando festivos...</option>';
+        
+        fetch(`/admin/api/employee/${userId}/available-holidays`)
+            .then(response => response.json())
+            .then(data => {
+                holidaySelect.innerHTML = '<option value="">Seleccionar festivo...</option>';
+                
+                if (data.holidays && data.holidays.length > 0) {
+                    data.holidays.forEach(holiday => {
+                        const option = document.createElement('option');
+                        option.value = holiday.id;
+                        option.textContent = `${holiday.date} - ${holiday.description || 'Sin descripción'}`;
+                        holidaySelect.appendChild(option);
+                    });
+                } else {
+                    holidaySelect.innerHTML = '<option value="">No hay festivos disponibles</option>';
+                }
+            })
+            .catch(error => {
+                console.error('Error cargando festivos:', error);
+                holidaySelect.innerHTML = '<option value="">Error cargando festivos</option>';
+            });
     }
 
     /**
@@ -219,14 +329,12 @@ class AdminModalsManager {
         const customInput = form.querySelector('input[name="custom_description"]');
         
         if (select && customInput && select.value === 'custom' && customInput.value.trim()) {
-            // Crear input hidden con la descripción personalizada
             const hiddenInput = document.createElement('input');
             hiddenInput.type = 'hidden';
             hiddenInput.name = 'description';
             hiddenInput.value = customInput.value.trim();
             form.appendChild(hiddenInput);
             
-            // Deshabilitar el select para que no envíe 'custom'
             select.disabled = true;
         }
     }
@@ -255,7 +363,6 @@ class AdminModalsManager {
      * Limpiar formularios al cerrar modales
      */
     clearModalForms() {
-        // Resetear formulario de solicitudes
         const requestForm = document.querySelector('#adminCreateRequestModal form');
         if (requestForm) {
             requestForm.reset();
@@ -263,7 +370,6 @@ class AdminModalsManager {
             if (holidayWarning) holidayWarning.style.display = 'none';
         }
 
-        // Resetear formulario de festivos
         const holidayForm = document.querySelector('#adminCreateHolidayModal form');
         if (holidayForm) {
             holidayForm.reset();
@@ -347,6 +453,8 @@ async function showEmployeeBalance(empId, empName) {
     const modal = document.getElementById('employeeBalanceModal');
     const content = document.getElementById('employeeBalanceContent');
     const title = document.getElementById('employeeBalanceModalLabel');
+    
+    if (!modal || !content || !title) return;
     
     title.textContent = `Balance de Vacaciones - ${empName}`;
     content.innerHTML = `

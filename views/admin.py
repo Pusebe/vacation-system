@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request as flask_request, redirect, url_for, flash, g, jsonify
 from utils import admin_required, get_canary_time
-from models import db, User, Department
+from models import db, User, Department, Request, WorkedHoliday
 from datetime import datetime, date
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
@@ -289,3 +289,47 @@ def reactivate_employee(user_id):
         db.session.rollback()
     
     return redirect(url_for('admin.employees'))
+
+    # Agregar este endpoint en views/admin.py:
+
+@admin_bp.route('/api/employee/<int:user_id>/available-holidays')
+@admin_required
+def get_employee_available_holidays(user_id):
+    """Obtener festivos disponibles de un empleado para el admin"""
+    try:
+        user = User.query.get_or_404(user_id)
+        
+        # Obtener festivos aprobados que NO estén siendo usados en requests
+        available_holidays = WorkedHoliday.query.filter_by(
+            user_id=user_id,
+            status='approved'
+        ).filter(
+            ~WorkedHoliday.id.in_(
+                db.session.query(Request.worked_holiday_id).filter(
+                    Request.worked_holiday_id.isnot(None),
+                    Request.status.in_(['pending', 'approved'])
+                )
+            )
+        ).order_by(WorkedHoliday.date.asc()).all()
+        
+        holidays_data = []
+        for holiday in available_holidays:
+            holidays_data.append({
+                'id': holiday.id,
+                'date': holiday.date.strftime('%d/%m/%Y'),
+                'description': holiday.description or 'Sin descripción'
+            })
+        
+        return jsonify({
+            'success': True,
+            'holidays': holidays_data,
+            'count': len(holidays_data),
+            'user_name': user.name
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'holidays': []
+        }), 400

@@ -31,13 +31,22 @@
                             </select>
                         </div>
                         
-                        <div class="col-12 mb-3">
+                         <div class="col-12 mb-3">
                             <label class="form-label">Tipo de solicitud</label>
                             <select name="type" class="form-select" required id="adminRequestType" onchange="checkEmployeeHolidays()">
                                 <option value="">Seleccionar tipo</option>
                                 <option value="vacation">Vacaciones</option>
                                 <option value="recovery" id="recoveryOption" disabled>Recuperación de festivo (sin festivos disponibles)</option>
                             </select>
+                        </div>
+                        
+                        <!-- ✅ NUEVO: Selector de festivo para recuperación -->
+                        <div class="col-12 mb-3 d-none" id="holidaySelector">
+                            <label class="form-label">Festivo a usar para recuperación</label>
+                            <select name="worked_holiday_id" class="form-select" id="holidaySelect">
+                                <option value="">Seleccionar festivo...</option>
+                            </select>
+                            <div class="form-hint">El festivo seleccionado se marcará como usado para esta recuperación</div>
                         </div>
                         
                         <div class="col-md-6 mb-3">
