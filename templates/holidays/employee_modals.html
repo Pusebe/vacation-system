@@ -66,7 +66,7 @@
                     <div class="row">
                         <div class="col-12 mb-3">
                             <label class="form-label">Fecha de recuperación</label>
-                            <input type="date" name="recovery_date" class="form-control" required min="{{ (moment().format('YYYY-MM-DD')) if moment else '' }}">
+                            <input type="date" name="recovery_date" class="form-control" required>
                             <div class="form-hint">Selecciona el día que quieres tomar como recuperación</div>
                         </div>
                         
@@ -74,11 +74,15 @@
                             <label class="form-label">Motivo adicional (opcional)</label>
                             <textarea name="reason" class="form-control" rows="3" placeholder="Explica por qué necesitas esta fecha específica..."></textarea>
                         </div>
+                        
+                        <div class="col-12">
+                            <div id="recovery-validation-result" class="alert" style="display: none;"></div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-warning">Solicitar Recuperación</button>
+                    <button type="submit" class="btn btn-warning" id="submitRecoveryBtn" disabled>Solicitar Recuperación</button>
                 </div>
             </form>
         </div>

@@ -81,9 +81,15 @@ def create():
             reason=reason
         )
         
-        # Validar usando el fat model (solo si no es admin con auto_approve)
+        # Validar usando el fat model (diferentes validaciones para admin vs empleado)
         if not auto_approve:
-            errors = new_request.validate()
+            if g.user.is_admin() and flask_request.form.get('user_id'):
+                # Admin creando para otro usuario - usar validación relajada
+                errors = new_request.validate_for_admin()
+            else:
+                # Empleado creando para sí mismo - validación completa
+                errors = new_request.validate()
+                
             if errors:
                 for error in errors:
                     flash(error, 'error')

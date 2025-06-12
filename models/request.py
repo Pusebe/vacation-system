@@ -86,7 +86,16 @@ class Request(db.Model):
             
             # Solo verificar disponibilidad del departamento, no solicitudes pendientes
             if not user.department.can_approve_vacation(self.start_date, self.end_date, self.user_id):
-                return False, [f"Ya hay {user.department.max_concurrent_vacations} empleado(s) de vacaciones en esas fechas en el departamento {user.department.name}."]
+                # Obtener información específica de quién está de vacaciones
+                employees_on_vacation = user.department.get_employees_on_vacation(self.start_date, self.end_date)
+                employees_on_vacation = [emp for emp in employees_on_vacation if emp.id != self.user_id]
+                
+                if employees_on_vacation:
+                    names = [emp.name for emp in employees_on_vacation]
+                    names_str = ", ".join(names)
+                    return False, [f"No se puede aprobar: {names_str} ya tiene(n) vacaciones en esas fechas. Máximo permitido en {user.department.name}: {user.department.max_concurrent_vacations} empleado(s)."]
+                else:
+                    return False, [f"No se puede aprobar: Ya hay {user.department.max_concurrent_vacations} empleado(s) de vacaciones en esas fechas en el departamento {user.department.name}."]
         
         self.status = 'approved'
         self.reviewed_at = get_canary_time()

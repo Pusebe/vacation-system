@@ -218,34 +218,99 @@ class User(db.Model):
             return self.vacation_days_override
         return self.department.vacation_days_per_year
 
-    def get_vacation_days_available(self, year=None):
-        """Calcular días de vacaciones disponibles (puede ser negativo)"""
+    def get_vacation_days_per_year_proportional(self, year=None):
+        """Calcular días proporcionalmente según fecha de contratación"""
         if not year:
             year = get_canary_time().year
         
+        base_days = self.get_vacation_days_per_year(year)
+        
+        # Si no tiene fecha de contratación, devolver días completos
+        if not self.hire_date:
+            return base_days
+        
+        # Si fue contratado antes del año en cuestión, días completos
+        if self.hire_date.year < year:
+            return base_days
+        
+        # Si fue contratado en el año en cuestión, calcular proporcionalmente
+        if self.hire_date.year == year:
+            # Días restantes desde la contratación hasta fin de año
+            start_of_year = date(year, 1, 1)
+            end_of_year = date(year, 12, 31)
+            
+            days_worked = (end_of_year - self.hire_date).days + 1
+            total_days_year = (end_of_year - start_of_year).days + 1
+            
+            proportion = days_worked / total_days_year
+            proportional_days = round(base_days * proportion)
+            
+            return proportional_days
+        
+        # Si fue contratado después del año en cuestión, 0 días
+        return 0
+
+    def get_vacation_days_available(self, year=None):
+        """Calcular días de vacaciones disponibles incluyendo arrastre completo del año anterior"""
+        if not year:
+            year = get_canary_time().year
+        
+        # Días base del año actual
         vacation_days_total = self.get_vacation_days_per_year(year)
         vacation_days_used = self.get_vacation_days_used(year)
-        return vacation_days_total - vacation_days_used
+        
+        # Calcular días no usados del año anterior (sin límites)
+        carryover_days = 0
+        if year > 2025:  # Solo para 2026 en adelante
+            previous_year = year - 1
+            previous_total = self.get_vacation_days_per_year(previous_year)
+            previous_used = self.get_vacation_days_used(previous_year)
+            previous_unused = previous_total - previous_used
+            
+            # Arrastrar TODOS los días no usados (pueden ser muchos)
+            if previous_unused > 0:
+                carryover_days = previous_unused
+        
+        total_available = vacation_days_total + carryover_days
+        return total_available - vacation_days_used
 
     def is_vacation_balance_negative(self, year=None):
         """Verificar si el balance de vacaciones está en negativo"""
         return self.get_vacation_days_available(year) < 0
 
     def get_vacation_balance_info(self, year=None):
-        """Obtener información completa del balance de vacaciones"""
+        """Obtener información completa del balance de vacaciones incluyendo arrastre"""
         if not year:
             year = get_canary_time().year
         
-        total_days = self.get_vacation_days_per_year(year)
+        # Días base del año
+        base_days = self.get_vacation_days_per_year(year)
         used_days = self.get_vacation_days_used(year)
+        
+        # Calcular arrastre del año anterior
+        carryover_days = 0
+        if year > 2025:
+            previous_year = year - 1
+            previous_total = self.get_vacation_days_per_year(previous_year)
+            previous_used = self.get_vacation_days_used(previous_year)
+            previous_unused = previous_total - previous_used
+            
+            if previous_unused > 0:
+                carryover_days = min(previous_unused, 5)
+        
+        total_days = base_days + carryover_days
         available_days = total_days - used_days
         
         return {
+            'base_days': base_days,
+            'carryover_days': carryover_days,
             'total_days': total_days,
             'used_days': used_days,
             'available_days': available_days,
             'is_negative': available_days < 0,
-            'year': year
+            'year': year,
+            'is_proportional': self.hire_date and self.hire_date.year == year and not self.vacation_days_override,
+            'hire_date': self.hire_date
         }
 
     def would_exceed_vacation_days(self, start_date, end_date, year=None):

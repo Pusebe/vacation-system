@@ -181,6 +181,13 @@
                                                 </td>
                                                 <td>
                                                     <span class="{{ request.get_status_class() }}">{{ request.get_status_text() }}</span>
+                                                    {% if request.status == 'rejected' %}
+                                                        <br><small class="text-danger">
+                                                            {% if 'Motivo del rechazo:' in (request.reason or '') %}
+                                                                {{ request.reason.split('Motivo del rechazo:')[1].strip()[:50] }}{% if request.reason.split('Motivo del rechazo:')[1].strip()|length > 50 %}...{% endif %}
+                                                            {% endif %}
+                                                        </small>
+                                                    {% endif %}
                                                 </td>
                                                 <td>
                                                     {% if request.reviewer %}
@@ -191,6 +198,11 @@
                                                 </td>
                                                 <td>
                                                     <div class="btn-list flex-nowrap">
+                                                        {% if request.status == 'rejected' %}
+                                                            <button type="button" class="btn btn-success btn-sm" onclick="approveRequest({{ request.id }})" title="Aprobar solicitud rechazada">
+                                                                <i class="ti ti-check"></i>
+                                                            </button>
+                                                        {% endif %}
                                                         <button type="button" class="btn btn-warning btn-sm" onclick="showEditModal({{ request.id }}, '{{ request.user.name }}', '{{ request.type }}', '{{ request.status }}', '{{ request.start_date }}', '{{ request.end_date }}', '{{ request.reason or '' }}')">
                                                             <i class="ti ti-edit"></i>
                                                         </button>

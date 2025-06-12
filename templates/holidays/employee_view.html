@@ -42,17 +42,19 @@
                                         <td>
                                             {% set recovery_status, recovery_request = holiday.get_recovery_status() %}
                                             {% if recovery_status == 'approved' %}
-                                                <button type="button" class="btn btn-success btn-sm" disabled>
+                                                <span class="badge bg-success">
                                                     <i class="ti ti-check me-1"></i>
                                                     Completada
-                                                </button>
+                                                </span>
                                             {% elif recovery_status == 'pending' %}
-                                                <button type="button" class="btn btn-outline-warning btn-sm" disabled>
+                                                <span class="badge bg-warning">
+                                                    <i class="ti ti-clock me-1"></i>
                                                     En espera
-                                                </button>
+                                                </span>
                                             {% else %}
                                                 <button type="button" class="btn btn-warning btn-sm" 
                                                         onclick="showRecoveryModal({{ holiday.id }}, '{{ holiday.date.strftime('%d/%m/%y') }}', '{{ holiday.description or 'Sin descripción' }}')">
+                                                    <i class="ti ti-calendar-plus me-1"></i>
                                                     Pedir día
                                                 </button>
                                             {% endif %}

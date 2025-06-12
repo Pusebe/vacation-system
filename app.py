@@ -140,9 +140,9 @@ def create_initial_data():
             vacation_days_per_year=30
         )
         
-        db.session.add(admin_dept)
-        db.session.add(dev_dept)
-        db.session.add(marketing_dept)
+        db.session.add(cap_dept)
+        db.session.add(mar_dept)
+        db.session.add(lim_dept)
         db.session.flush()  # Para obtener los IDs
         
         # Crear usuario administrador
@@ -158,23 +158,8 @@ def create_initial_data():
         admin_user.set_password('alfredo')
         db.session.add(admin_user)
         
-        # Crear usuario de ejemplo
-        example_user = User(
-            email='juan.perez@empresa.com',
-            name='Juan Pérez',
-            department_id=mar_dept.id,
-            role='employee',
-            is_active=True,
-            vacation_days_override=None,
-            hire_date=date.today()
-        )
-        example_user.set_password('user123')
-        db.session.add(example_user)
-        
         db.session.commit()
         print("Datos iniciales creados correctamente")
-        print("Usuario admin: admin@empresa.com / admin123")
-        print("Usuario ejemplo: juan.perez@empresa.com / user123")
         
     except Exception as e:
         db.session.rollback()
