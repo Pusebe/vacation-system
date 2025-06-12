@@ -148,50 +148,45 @@ class WorkedHoliday(db.Model):
     
     # En models/holiday.py - Reemplazar el método is_available_for_recovery():
     def is_available_for_recovery(self):
-        """Verificar si está disponible para recuperación - excluye completados"""
+        """Verificar si está disponible para recuperación"""
         if self.status != 'approved':
             return False, "El festivo debe estar aprobado para solicitar recuperación."
         
-        # Verificar si ya está completado
+        # Usar la relación directa en lugar de buscar por texto
         recovery_status, recovery_request = self.get_recovery_status()
-        if recovery_status:
-            if '[COMPLETADO' in (self.description or ''):
-                return False, "Este festivo ya ha sido usado para una recuperación."
-            else:
-                status_text = recovery_request.get_status_text().lower() if recovery_request else 'procesado'
-                return False, f"Ya tienes una recuperación {status_text} para este festivo."
         
-        return True, "Disponible para recuperación"
+        if recovery_status == 'approved':
+            return False, "Este festivo ya ha sido usado para una recuperación aprobada."
+        elif recovery_status == 'pending':
+            return False, "Ya tienes una recuperación pendiente para este festivo."
+        # Si recovery_status == 'rejected' o None, está disponible
+        else:
+            return True, "Disponible para recuperación"
 
-    def has_pending_or_approved_recovery(self):
-        """Verificar si tiene recuperación o está completado"""
-        recovery_status, _ = self.get_recovery_status()
-        return recovery_status is not None
+        def has_pending_or_approved_recovery(self):
+            """Verificar si tiene recuperación o está completado"""
+            recovery_status, _ = self.get_recovery_status()
+            return recovery_status is not None
 # En models/holiday.py - Reemplazar el método get_recovery_status():
 
+# REEMPLAZAR temporalmente en models/holiday.py
+
     def get_recovery_status(self):
-        """Obtener el estado de la recuperación - detecta COMPLETADO"""
-        from .request import Request
+        """Obtener el estado de la recuperación usando la relación directa"""
+        # ✅ USAR LA RELACIÓN DIRECTA
+        active_recovery = None
+        for request in self.recovery_requests:
+            if request.status in ['pending', 'approved']:
+                active_recovery = request
+                break
         
-        # Verificar si está marcado como COMPLETADO en la descripción
-        if self.description and '[COMPLETADO' in self.description:
-            return 'approved', None  # Lo consideramos como recuperación aprobada/completada
-        
-        # Buscar recuperación real en solicitudes
-        existing_recovery = Request.query.filter(
-            Request.user_id == self.user_id,
-            Request.type == 'recovery',
-            Request.status.in_(['pending', 'approved']),
-            Request.reason.like(f'%festivo trabajado el {self.date}%')
-        ).first()
-        
-        if existing_recovery:
-            return existing_recovery.status, existing_recovery
+        if active_recovery:
+            return active_recovery.status, active_recovery
         
         return None, None
 
     def create_recovery_request(self, recovery_date, reason=None):
-        """Crear una solicitud de recuperación usando este festivo (solo 1 día)"""
+        """Crear una solicitud de recuperación usando este festivo"""
         from .request import Request
         
         # Verificar disponibilidad
@@ -199,12 +194,13 @@ class WorkedHoliday(db.Model):
         if not is_available:
             return None, message
         
-        # Crear la solicitud de recuperación (solo 1 día)
+        # ✅ CREAR REQUEST CON worked_holiday_id CORRECTO
         recovery_request = Request(
             user_id=self.user_id,
             type='recovery',
             start_date=recovery_date,
-            end_date=recovery_date,  # Mismo día para inicio y fin
+            end_date=recovery_date,
+            worked_holiday_id=self.id,  # 🎯 ESTO ES CLAVE
             reason=f"Recuperación por festivo trabajado el {self.date}: {self.description or 'Sin descripción'}"
         )
         
@@ -212,7 +208,7 @@ class WorkedHoliday(db.Model):
             recovery_request.reason += f"\n\nMotivo adicional: {reason}"
         
         return recovery_request, "Solicitud de recuperación creada."
-    
+        
     @staticmethod
     def get_common_holidays():
         """Obtener lista de festivos comunes en España/Canarias"""

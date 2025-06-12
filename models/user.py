@@ -165,28 +165,24 @@ class User(db.Model):
 # En models/user.py - Reemplazar el método get_available_holidays_count():
 
     def get_available_holidays_count(self):
-        """Obtener número de festivos aprobados disponibles para recuperación - CORREGIDO"""
+        """Obtener número de festivos aprobados disponibles para recuperación"""
         from .holiday import WorkedHoliday
-        from .request import Request
         
-        # Obtener festivos aprobados que NO estén siendo usados en requests
-        available_holidays = WorkedHoliday.query.filter_by(
+        # Obtener todos los festivos aprobados
+        approved_holidays = WorkedHoliday.query.filter_by(
             user_id=self.id, 
             status='approved'
-        ).filter(
-            ~WorkedHoliday.id.in_(
-                db.session.query(Request.worked_holiday_id).filter(
-                    Request.worked_holiday_id.isnot(None),
-                    Request.status.in_(['pending', 'approved'])
-                )
-            )
         ).all()
         
-        print(f"🔍 Usuario {self.name}: {len(available_holidays)} festivos disponibles")
-        for holiday in available_holidays:
-            print(f"  - {holiday.date}: {holiday.description}")
+        available_count = 0
+        for holiday in approved_holidays:
+            recovery_status, _ = holiday.get_recovery_status()
+            # Disponible si no tiene recovery activa O si la anterior fue rechazada
+            if not recovery_status or recovery_status == 'rejected':
+                available_count += 1
         
-        return len(available_holidays)
+        return available_count
+
 
     # Agregar este método en models/user.py después del método get_available_holidays_count() (línea ~280 aprox):
 
@@ -475,41 +471,59 @@ class User(db.Model):
         except Exception as e:
             db.session.rollback()
             return None, f"Error al crear: {str(e)}"
-
-
-
-
-def complete_available_holiday(self):
-    """Marcar un festivo disponible como completado (mantiene aprobado + completado)"""
-    from .holiday import WorkedHoliday
     
-    # Buscar el primer festivo aprobado sin usar
-    approved_holidays = WorkedHoliday.query.filter_by(
-        user_id=self.id, 
-        status='approved'
-    ).order_by(WorkedHoliday.date.asc()).all()
     
-    for holiday in approved_holidays:
-        # Verificar que no esté ya completado
-        recovery_status, _ = holiday.get_recovery_status()
-        if not recovery_status:  # Disponible
-            print(f"🔄 Marcando festivo del {holiday.date} como COMPLETADO")
-            
-            # Agregar marca de completado en la descripción
-            completion_mark = f"[COMPLETADO {get_canary_time().strftime('%d/%m/%Y')}]"
-            if holiday.description:
-                holiday.description += f" {completion_mark}"
-            else:
-                holiday.description = completion_mark
-            
-            try:
-                db.session.commit()
-                print(f"✅ Festivo completado: {holiday.date}")
-                return holiday
-            except Exception as e:
-                print(f"❌ Error completando festivo: {e}")
-                db.session.rollback()
-                return None
-    
-    print(f"❌ No hay festivos disponibles para completar")
-    return None
+    def get_overlapping_request(self, start_date, end_date, exclude_request_id=None):
+        """Obtener solicitud que se solapa con las fechas dadas"""
+        from .request import Request
+        
+        query = Request.query.filter(
+            Request.user_id == self.id,
+            Request.status.in_(['pending', 'approved']),
+            Request.start_date <= end_date,
+            Request.end_date >= start_date
+        )
+        
+        if exclude_request_id:
+            query = query.filter(Request.id != exclude_request_id)
+        
+        return query.first()
+
+
+
+
+    def complete_available_holiday(self):
+        """Marcar un festivo disponible como completado (mantiene aprobado + completado)"""
+        from .holiday import WorkedHoliday
+        
+        # Buscar el primer festivo aprobado sin usar
+        approved_holidays = WorkedHoliday.query.filter_by(
+            user_id=self.id, 
+            status='approved'
+        ).order_by(WorkedHoliday.date.asc()).all()
+        
+        for holiday in approved_holidays:
+            # Verificar que no esté ya completado
+            recovery_status, _ = holiday.get_recovery_status()
+            if not recovery_status:  # Disponible
+                print(f"🔄 Marcando festivo del {holiday.date} como COMPLETADO")
+                
+                # Agregar marca de completado en la descripción
+                completion_mark = f"[COMPLETADO {get_canary_time().strftime('%d/%m/%Y')}]"
+                if holiday.description:
+                    holiday.description += f" {completion_mark}"
+                else:
+                    holiday.description = completion_mark
+                
+                try:
+                    db.session.commit()
+                    print(f"✅ Festivo completado: {holiday.date}")
+                    return holiday
+                except Exception as e:
+                    print(f"❌ Error completando festivo: {e}")
+                    db.session.rollback()
+                    return None
+        
+        print(f"❌ No hay festivos disponibles para completar")
+        return None
+

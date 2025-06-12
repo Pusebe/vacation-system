@@ -29,8 +29,8 @@
                         <table class="table table-vcenter card-table">
                             <thead>
                                 <tr>
-                                    <th class="w-1">Acción</th>
-                                    <th>Estado</th>
+                                    <th class="w-1">Estado</th>
+                                    <th>Fecha Solicitud</th>
                                     <th>Día trabajado</th>
                                     <th>Descripción</th>
                                     <th>Fecha aprobación</th>
@@ -41,42 +41,85 @@
                                     <tr>
                                         <td>
                                             {% set recovery_status, recovery_request = holiday.get_recovery_status() %}
+                                            
                                             {% if recovery_status == 'approved' %}
+                                                <!-- Recuperación completada -->
                                                 <span class="badge bg-success">
                                                     <i class="ti ti-check me-1"></i>
-                                                    Completada
+                                                    Aceptada
                                                 </span>
+                                                
                                             {% elif recovery_status == 'pending' %}
+                                                <!-- Recuperación pendiente -->
                                                 <span class="badge bg-warning">
                                                     <i class="ti ti-clock me-1"></i>
                                                     En espera
                                                 </span>
-                                            {% else %}
+                                                
+                                            {% elif recovery_status == 'rejected' %}
+                                                <!-- Recuperación rechazada - puede volver a pedir -->
                                                 <button type="button" class="btn btn-warning btn-sm" 
+                                                        onclick="showRecoveryModal({{ holiday.id }}, '{{ holiday.date.strftime('%d/%m/%y') }}', '{{ holiday.description or 'Sin descripción' }}')">
+                                                    <i class="ti ti-calendar-plus me-1"></i>
+                                                    Reintentar
+                                                </button>
+                                                
+                                            {% else %}
+                                                <!-- No tiene recuperación - disponible -->
+                                                <button type="button" class="btn btn-primary btn-sm" 
                                                         onclick="showRecoveryModal({{ holiday.id }}, '{{ holiday.date.strftime('%d/%m/%y') }}', '{{ holiday.description or 'Sin descripción' }}')">
                                                     <i class="ti ti-calendar-plus me-1"></i>
                                                     Pedir día
                                                 </button>
                                             {% endif %}
                                         </td>
+                                        
                                         <td>
                                             {% set recovery_status, recovery_request = holiday.get_recovery_status() %}
-                                            {% if recovery_status %}
-                                                <span class="badge bg-{{ 'warning' if recovery_status == 'pending' else 'success' if recovery_status == 'approved' else 'danger' }}">
-                                                    {{ 'Pendiente' if recovery_status == 'pending' else 'Aprobada' if recovery_status == 'approved' else 'Rechazada' }}
-                                                </span>
+                                            
+                                            {% if recovery_status == 'pending' %}
+                                                <span class="badge bg-secondary">{{ recovery_request.start_date.strftime('%d/%m/%y') }}</span>
+                                                
+                                            {% elif recovery_status == 'approved' %}
+                                                <span class="badge bg-secondary">{{ recovery_request.start_date.strftime('%d/%m/%y') }}</span>
+                                                
+                                            {% elif recovery_status == 'rejected' %}
+                                                <span class="badge bg-secondary">{{ recovery_request.start_date.strftime('%d/%m/%y') }}</span>
+                                                
                                             {% else %}
                                                 <span class="badge bg-secondary">Disponible</span>
+ 
                                             {% endif %}
                                         </td>
+                                        
                                         <td>
                                             <div class="font-weight-medium">{{ holiday.date.strftime('%d/%m/%y') }}</div>
+                                            <small class="text-muted">
+                                                {% set day_name = holiday.date.strftime('%A') %}
+                                                {% if day_name == 'Monday' %}Lunes
+                                                {% elif day_name == 'Tuesday' %}Martes  
+                                                {% elif day_name == 'Wednesday' %}Miércoles
+                                                {% elif day_name == 'Thursday' %}Jueves
+                                                {% elif day_name == 'Friday' %}Viernes
+                                                {% elif day_name == 'Saturday' %}Sábado
+                                                {% elif day_name == 'Sunday' %}Domingo
+                                                {% endif %}
+                                            </small>
                                         </td>
+                                        
                                         <td>
-                                            {{ holiday.description or 'Sin descripción' }}
+                                            <div class="text-truncate" style="max-width: 200px;">
+                                                {{ holiday.description or 'Sin descripción' }}
+                                            </div>
                                         </td>
+                                        
                                         <td>
-                                            {{ holiday.approved_at.strftime('%d/%m/%y') if holiday.approved_at else '-' }}
+                                            {% if holiday.approved_at %}
+                                                <div class="font-weight-medium">{{ holiday.approved_at.strftime('%d/%m/%y') }}</div>
+                                                <small class="text-muted">{{ holiday.approved_at.strftime('%H:%M') }}</small>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
                                         </td>
                                     </tr>
                                 {% endfor %}

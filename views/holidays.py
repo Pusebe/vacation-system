@@ -31,22 +31,13 @@ def index():
             status='approved'
         ).order_by(WorkedHoliday.date.desc()).all()
         
-        # Solo festivos aprobados SIN recuperación asociada (para el contador)
-        available_holidays = WorkedHoliday.query.filter_by(
-            user_id=g.user.id,
-            status='approved'
-        ).filter(
-            ~WorkedHoliday.id.in_(
-                db.session.query(Request.worked_holiday_id).filter(
-                    Request.worked_holiday_id.isnot(None),
-                    Request.status.in_(['pending', 'approved'])
-                )
-            )
-        ).all()
-        
-        print(f"🔍 Vista empleado {g.user.name}:")
-        print(f"  - Total festivos aprobados: {len(approved_holidays)}")
-        print(f"  - Festivos disponibles: {len(available_holidays)}")
+        # Calcular festivos disponibles
+        available_holidays = []
+        for holiday in approved_holidays:
+            recovery_status, _ = holiday.get_recovery_status()
+            # Disponible si no tiene recovery activa O si la anterior fue rechazada
+            if not recovery_status or recovery_status == 'rejected':
+                available_holidays.append(holiday)
         
         return render_template('holidays.html',
                             is_admin=False,
@@ -177,7 +168,7 @@ def cancel(holiday_id):
 @holidays_bp.route('/holidays/<int:holiday_id>/create-recovery', methods=['POST'])
 @login_required
 def create_recovery(holiday_id):
-    """Crear solicitud de recuperación usando un festivo trabajado (MEJORADO: solo 1 día)"""
+    """Crear solicitud de recuperación usando un festivo trabajado"""
     holiday = WorkedHoliday.query.get_or_404(holiday_id)
     
     # Verificar que sea el dueño del festivo
@@ -186,11 +177,11 @@ def create_recovery(holiday_id):
         return redirect(url_for('holidays.index'))
     
     try:
-        # Obtener datos del formulario (solo una fecha ahora)
+        # Obtener datos del formulario
         recovery_date = datetime.strptime(flask_request.form.get('recovery_date'), '%Y-%m-%d').date()
         additional_reason = flask_request.form.get('reason', '').strip()
         
-        # Usar método del fat model para crear la recuperación (solo 1 día)
+        # Usar método del fat model para crear la recuperación
         recovery_request, message = holiday.create_recovery_request(recovery_date, additional_reason)
         
         if recovery_request:
@@ -208,7 +199,7 @@ def create_recovery(holiday_id):
             # Crear notificaciones
             create_notifications_for_new_request(recovery_request)
             
-            flash('Solicitud de recuperación de 1 día creada correctamente.', 'success')
+            flash('Solicitud de recuperación creada correctamente.', 'success')
         else:
             flash(message, 'error')
             
