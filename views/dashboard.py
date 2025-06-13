@@ -49,7 +49,7 @@ def render_admin_dashboard():
         # Calcular días de vacaciones disponibles (asumiendo 22 días por año)
         current_year = today.year
         vacation_days_used = employee.get_vacation_days_used(current_year)
-        vacation_days_available = max(0, 22 - vacation_days_used)  # 22 días estándar
+        vacation_days_available = employee.get_vacation_days_available()
         
         # Calcular festivos aprobados disponibles para recuperación
         approved_holidays = WorkedHoliday.query.filter(

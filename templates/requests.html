@@ -9,6 +9,7 @@
 {% endblock %}
 
 {% block content %}
+
 <div class="page-header d-print-none">
     <div class="container-xl">
         <div class="row g-2 align-items-center">
@@ -112,7 +113,7 @@
                                                             <button type="button" class="btn btn-danger btn-sm" onclick="showRejectModal({{ request.id }}, '{{ request.user.name }}')">
                                                                 <i class="ti ti-x"></i>
                                                             </button>
-                                                            <button type="button" class="btn btn-warning btn-sm" onclick="showEditModal({{ request.id }}, '{{ request.user.name }}', '{{ request.type }}', '{{ request.status }}', '{{ request.start_date }}', '{{ request.end_date }}', '{{ request.reason or '' }}')">
+                                                            <button type="button" class="btn btn-warning btn-sm" onclick="showEditModal({{ request.id }}, '{{ request.user.name }}', '{{ request.type }}', '{{ request.status }}', '{{ request.start_date }}', '{{ request.end_date }}', '{{ (request.reason or '')|replace("'", "\\'") }}')">
                                                                 <i class="ti ti-edit"></i>
                                                             </button>
                                                             <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteRequest({{ request.id }}, '{{ request.user.name }}')">
@@ -203,7 +204,7 @@
                                                                 <i class="ti ti-check"></i>
                                                             </button>
                                                         {% endif %}
-                                                        <button type="button" class="btn btn-warning btn-sm" onclick="showEditModal({{ request.id }}, '{{ request.user.name }}', '{{ request.type }}', '{{ request.status }}', '{{ request.start_date }}', '{{ request.end_date }}', '{{ request.reason or '' }}')">
+                                                        <button type="button" class="btn btn-warning btn-sm" onclick="showEditModal({{ request.id }}, '{{ request.user.name }}', '{{ request.type }}', '{{ request.status }}', '{{ request.start_date }}', '{{ request.end_date }}', '{{ (request.reason or '')|replace('\n', ' ')|replace("'", "\\'") }}')">
                                                             <i class="ti ti-edit"></i>
                                                         </button>
                                                         <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteRequest({{ request.id }}, '{{ request.user.name }}')">

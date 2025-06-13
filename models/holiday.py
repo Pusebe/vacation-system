@@ -1,6 +1,7 @@
 from . import db
 from utils import get_canary_time
 from datetime import date
+from .request import Request
 
 class WorkedHoliday(db.Model):
     __tablename__ = 'worked_holidays'
@@ -172,16 +173,15 @@ class WorkedHoliday(db.Model):
 # REEMPLAZAR temporalmente en models/holiday.py
 
     def get_recovery_status(self):
-        """Obtener el estado de la recuperación usando la relación directa"""
-        # ✅ USAR LA RELACIÓN DIRECTA
-        active_recovery = None
-        for request in self.recovery_requests:
-            if request.status in ['pending', 'approved']:
-                active_recovery = request
-                break
+        """Obtener el estado de la recuperación más reciente"""
         
-        if active_recovery:
-            return active_recovery.status, active_recovery
+        # Hacer una query real en lugar de usar la lista
+        latest_recovery = Request.query.filter_by(
+            worked_holiday_id=self.id
+        ).order_by(Request.created_at.desc()).first()
+        
+        if latest_recovery:
+            return latest_recovery.status, latest_recovery
         
         return None, None
 
@@ -201,11 +201,11 @@ class WorkedHoliday(db.Model):
             start_date=recovery_date,
             end_date=recovery_date,
             worked_holiday_id=self.id,  # 🎯 ESTO ES CLAVE
-            reason=f"Recuperación por festivo trabajado el {self.date}: {self.description or 'Sin descripción'}"
+            reason=f"{self.description or ''}"
         )
         
         if reason:
-            recovery_request.reason += f"\n\nMotivo adicional: {reason}"
+            recovery_request.reason += f"\n\n{reason}"
         
         return recovery_request, "Solicitud de recuperación creada."
         

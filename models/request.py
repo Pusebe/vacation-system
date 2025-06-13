@@ -1,6 +1,7 @@
 from . import db
 from utils import get_canary_time, calculate_vacation_days, validate_date_range
 from datetime import date
+from . import User
 
 class Request(db.Model):
     __tablename__ = 'requests'
@@ -83,8 +84,12 @@ class Request(db.Model):
         """Aprobar la solicitud"""
         # Solo validar fechas básicas y disponibilidad de departamento para vacaciones
         if self.type == 'vacation':
-            from . import User
+            
             user = User.query.get(self.user_id)
+            
+            would_exceed, excess_days, details = user.would_exceed_vacation_days(self.start_date, self.end_date)
+            if would_exceed:
+                return False, f"No se puede aprobar: excedería en {excess_days} días el límite anual de {user.get_vacation_days_per_year()}. El empleado tendría {details['would_have_after']} días después de esta solicitud."
             
             # Solo verificar disponibilidad del departamento, no solicitudes pendientes
             if not user.department.can_approve_vacation(self.start_date, self.end_date, self.user_id):

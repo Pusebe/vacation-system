@@ -228,16 +228,14 @@ class User(db.Model):
         return self.department.vacation_days_per_year
 
     def get_vacation_days_per_year(self, year=None):
-        """Obtener días de vacaciones por año (con cálculo proporcional si aplica)"""
         if not year:
             year = get_canary_time().year
-            
-        # Si tiene override personalizado, usarlo tal cual (sin proporcional)
-        if self.vacation_days_override is not None:
-            return self.vacation_days_override
         
-        # Si no tiene override, usar días del departamento con cálculo proporcional
-        base_days = self.department.vacation_days_per_year
+        # Determinar días base (override o departamento)
+        if self.vacation_days_override is not None:
+            base_days = self.vacation_days_override  # ✅ Usar override
+        else:
+            base_days = self.department.vacation_days_per_year  # ✅ Usar departamento
         
         # Si no tiene fecha de contratación, devolver días completos
         if not self.hire_date:
@@ -256,7 +254,7 @@ class User(db.Model):
             total_days_year = (end_of_year - start_of_year).days + 1
             
             proportion = days_worked / total_days_year
-            proportional_days = round(base_days * proportion)
+            proportional_days = round(base_days * proportion)  # ✅ Aplica proporcional al override
             
             return proportional_days
         
@@ -274,7 +272,7 @@ class User(db.Model):
         
         # Calcular días no usados del año anterior (sin límites)
         carryover_days = 0
-        if year > 2024:  # Cambiado a 2024 para testing - cambiar a 2025 en producción
+        if year > 2025:  # Cambiado a 2024 para testing - cambiar a 2025 en producción
             previous_year = year - 1
             previous_total = self.get_vacation_days_per_year(previous_year)
             previous_used = self.get_vacation_days_used(previous_year)
@@ -302,7 +300,7 @@ class User(db.Model):
         
         # Calcular arrastre del año anterior
         carryover_days = 0
-        if year > 2024:  # Cambiado a 2024 para testing
+        if year > 2025:  # Cambiado a 2024 para testing
             previous_year = year - 1
             previous_total = self.get_vacation_days_per_year(previous_year)
             previous_used = self.get_vacation_days_used(previous_year)

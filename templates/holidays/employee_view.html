@@ -49,44 +49,44 @@
                                                 <span class="badge bg-secondary">{{ recovery_request.start_date.strftime('%d/%m/%y') }}</span>
                                                 
                                             {% elif recovery_status == 'rejected' %}
-                                                <span class="badge bg-secondary">{{ recovery_request.start_date.strftime('%d/%m/%y') }}</span>
-                                                {% if recovery_request.reason %}
-                                                    <br><small class="text-danger">{{ recovery_request.reason }}</small>
-                                                {% endif %}
+                                                <!-- BOTÓN REINTENTAR en lugar de fecha -->
+                                                <button type="button" class="btn btn-warning btn-sm" 
+                                                        onclick="showRecoveryModal({{ holiday.id }}, '{{ holiday.date.strftime('%d/%m/%y') }}', '{{ holiday.description or 'Sin descripción' }}')">
+                                                    <i class="ti ti-calendar-plus me-1"></i>
+                                                    Reintentar
+                                                </button>
+                                                
                                             {% else %}
-                                                                                              <!-- No tiene recuperación - disponible -->
                                                 <button type="button" class="btn btn-primary btn-sm" 
                                                         onclick="showRecoveryModal({{ holiday.id }}, '{{ holiday.date.strftime('%d/%m/%y') }}', '{{ holiday.description or 'Sin descripción' }}')">
                                                     <i class="ti ti-calendar-plus me-1"></i>
                                                     Pedir día
                                                 </button>
- 
                                             {% endif %}
                                         </td>
                                         <td>
-                                            {% set recovery_status, recovery_request = holiday.get_recovery_status() %}
-                                            
                                             {% if recovery_status == 'approved' %}
-                                                <!-- Recuperación completada -->
                                                 <span class="badge bg-success">
                                                     <i class="ti ti-check me-1"></i>
                                                     Aceptada
                                                 </span>
                                                 
                                             {% elif recovery_status == 'pending' %}
-                                                <!-- Recuperación pendiente -->
                                                 <span class="badge bg-warning">
                                                     <i class="ti ti-clock me-1"></i>
                                                     En espera
                                                 </span>
                                                 
                                             {% elif recovery_status == 'rejected' %}
-                                                <!-- Recuperación rechazada - puede volver a pedir -->
-                                                <button type="button" class="btn btn-warning btn-sm" 
-                                                        onclick="showRecoveryModal({{ holiday.id }}, '{{ holiday.date.strftime('%d/%m/%y') }}', '{{ holiday.description or 'Sin descripción' }}')">
-                                                    <i class="ti ti-calendar-plus me-1"></i>
-                                                    Reintentar
-                                                </button>
+                                                <!-- RECHAZADA + MOTIVO -->
+                                                <span class="badge bg-danger">
+                                                    <i class="ti ti-x me-1"></i>
+                                                    Rechazada
+                                                </span>
+
+                                                {% if 'Motivo del rechazo:' in (recovery_request.reason or '') %}
+                                                    <br><small class="text-danger">{{ recovery_request.reason.split('Motivo del rechazo:')[1].strip() }}</small>
+                                                {% endif %}
                                                 
                                             {% else %}
                                                 <span class="badge bg-secondary">Disponible</span>
