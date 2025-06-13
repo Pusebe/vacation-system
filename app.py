@@ -209,7 +209,7 @@ if __name__ == '__main__':
     # Configuración para desarrollo/producción
     app.run(
         host='0.0.0.0',  # Accesible desde fuera
-        port=5002,
+        port=5003,
         debug=False,  # En producción siempre False
         threaded=True
     )
