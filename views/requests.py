@@ -186,17 +186,17 @@ def approve(request_id):
     
     if success:
         flash(f'Solicitud de {request_obj.get_type_text().lower()} aprobada para {request_obj.user.name}.', 'success')
-        print("✅ Flash SUCCESS generado")  
+         
     else:
         if isinstance(message, list):
             for error in message:
                 flash(error, 'error')
-                print(f"❌ Flash ERROR generado: '{message}'")
+                
         else:
             flash(message, 'error')
-            print(f"❌ Flash ERROR generado: '{message}'")
+            
     
-    return redirect(url_for('requests.index'))
+    return '', 204
 
 @requests_bp.route('/requests/<int:request_id>/reject', methods=['POST'])
 @admin_required

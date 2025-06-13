@@ -259,7 +259,7 @@ function setupAlertDismiss() {
         document.querySelectorAll('.alert-dismissible .btn-close').forEach(btn => {
             if (btn) btn.click();
         });
-    }, 5000);
+    }, 15000);
 }
 
 // Cleanup al salir
