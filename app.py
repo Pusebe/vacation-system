@@ -8,7 +8,7 @@ def create_app():
     """Factory para crear la aplicación Flask"""
     app = Flask(__name__)
     app.config.from_object(Config)
-    
+    app.jinja_env.autoescape = True
     # Inicializar extensiones
     db.init_app(app)
     

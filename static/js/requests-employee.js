@@ -6,19 +6,34 @@ function toggleRequestType() {
     validateDates();
 }
 
+// Reemplaza tu función validateDates en requests-employee.js con esta:
+
 function validateDates() {
-    const startDate = document.querySelector('input[name="start_date"]').value;
-    const endDate = document.querySelector('input[name="end_date"]').value;
-    const type = document.querySelector('select[name="type"]').value;
+    // Protección: buscar elementos SIN asumir que existen
+    const startInput = document.querySelector('input[name="start_date"]');
+    const endInput = document.querySelector('input[name="end_date"]');
+    const typeSelect = document.querySelector('select[name="type"]');
     const resultDiv = document.getElementById('validation-result');
     const submitBtn = document.getElementById('submitBtn');
     
-    if (!startDate || !endDate || !type) {
+    // Si no existen los elementos, salir silenciosamente
+    if (!startInput || !endInput || !resultDiv || !submitBtn) {
+        console.log('validateDates: elementos no encontrados');
+        return;
+    }
+    
+    // Ahora SÍ obtener valores
+    const startDate = startInput.value;
+    const endDate = endInput.value;
+    const type = typeSelect ? typeSelect.value : 'vacation'; // fallback si no hay selector
+    
+    if (!startDate || !endDate) {
         resultDiv.style.display = 'none';
         submitBtn.disabled = true;
         return;
     }
     
+    // El resto igual que antes
     fetch(`/api/validate-dates?start_date=${startDate}&end_date=${endDate}&type=${type}`)
         .then(response => response.json())
         .then(data => {

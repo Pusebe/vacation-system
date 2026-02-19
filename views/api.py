@@ -70,7 +70,7 @@ def validate_dates():
                 days = (end_date - start_date).days + 1
                 return jsonify({
                     'available': True,
-                    'message': f'Fechas disponibles ({days} días)',
+                    'message': f'Solicitas {days} días.',
                     'days': days
                 })
             else:

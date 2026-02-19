@@ -1,30 +1,49 @@
-<!-- Modal para nueva solicitud - SOLO VACACIONES -->
+<!-- Modal para nueva solicitud - SOLO VACACIONES con Flatpickr -->
 <div class="modal modal-blur fade" id="newRequestModal" tabindex="-1" aria-labelledby="newRequestModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="newRequestModalLabel">Nueva Solicitud de Vacaciones</h5>
+                <h5 class="modal-title" id="newRequestModalLabel">
+                    <i class="ti ti-beach me-2"></i>
+                    Nueva Solicitud de Vacaciones
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="POST" action="{{ url_for('requests.create') }}">
                 <!-- Tipo fijo: solo vacaciones -->
                 <input type="hidden" name="type" value="vacation">
                 
+                <!-- Campos ocultos para el servidor -->
+                <input type="hidden" name="start_date" required>
+                <input type="hidden" name="end_date" required>
+                
                 <div class="modal-body">
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Fecha de inicio</label>
-                            <input type="date" name="start_date" class="form-control" required min="{{ moment().format('YYYY-MM-DD') if moment else '' }}" onchange="validateDates()">
-                        </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Fecha de fin</label>
-                            <input type="date" name="end_date" class="form-control" required min="{{ moment().format('YYYY-MM-DD') if moment else '' }}" onchange="validateDates()">
+                        <div class="col-12 mb-3">
+                            <label class="form-label required">Seleccionar fechas de vacaciones</label>
+                            <div class="input-group">
+                                <input type="text" 
+                                       class="form-control date-range-picker" 
+                                       placeholder="Fecha inicio → Fecha fin" 
+                                       readonly>
+                                <span class="input-group-text">
+                                    <i class="ti ti-calendar-event"></i>
+                                </span>
+                            </div>
+                            <div class="form-hint">
+                                Haz clic para abrir el calendario y selecciona el rango de fechas
+                            </div>
                         </div>
                         
                         <div class="col-12 mb-3">
                             <label class="form-label">Motivo (opcional)</label>
-                            <textarea name="reason" class="form-control" rows="3" placeholder="Describe el motivo de tus vacaciones..."></textarea>
+                            <textarea name="reason" 
+                                      class="form-control" 
+                                      rows="3" 
+                                      placeholder="Describe el motivo de tus vacaciones (viaje, descanso, familia, etc.)"></textarea>
+                            <div class="form-hint">
+                                Aunque es opcional, ayuda a tu supervisor entender el contexto de tu solicitud.
+                            </div>
                         </div>
                         
                         <div class="col-12">
@@ -33,8 +52,14 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary" id="submitBtn" disabled>Solicitar Vacaciones</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="ti ti-x me-2"></i>
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                        <i class="ti ti-send me-2"></i>
+                        Solicitar Vacaciones
+                    </button>
                 </div>
             </form>
         </div>

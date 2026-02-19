@@ -1,4 +1,4 @@
-<!-- Acciones rápidas para empleados - SIN recovery -->
+<!-- Acciones rápidas para empleados - CON FLATPICKR -->
 <div class="col-12">
     <div class="card">
         <div class="card-header">
@@ -7,29 +7,29 @@
         <div class="card-body">
             <div class="row">
                 <div class="col-md-4 mb-3">
-                    <button type="button" class="btn btn-primary w-100 h-100" data-bs-toggle="modal" data-bs-target="#newVacationModal">
+                    <button type="button" class="btn btn-primary w-100 " data-bs-toggle="modal" data-bs-target="#newVacationModal">
                         <i class="ti ti-beach me-2"></i>
                         <div>
                             <strong>Pedir Vacaciones</strong>
-                            <br><small class="opacity-75">Solicitar días de descanso</small>
+                    
                         </div>
                     </button>
                 </div>
                 <div class="col-md-4 mb-3">
-                    <button type="button" class="btn btn-info w-100 h-100" data-bs-toggle="modal" data-bs-target="#newHolidayModal">
+                    <button type="button" class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#newHolidayModal">
                         <i class="ti ti-calendar-event me-2"></i>
                         <div>
                             <strong>Marcar Festivos</strong>
-                            <br><small class="opacity-75">Registrar día festivo trabajado</small>
+                            
                         </div>
                     </button>
                 </div>
                 <div class="col-md-4 mb-3">
-                    <a href="{{ url_for('holidays.index') }}" class="btn btn-warning w-100 h-100">
+                    <a href="{{ url_for('holidays.index') }}" class="btn btn-warning w-100">
                         <i class="ti ti-calendar-check me-2"></i>
                         <div>
                             <strong>Gestionar Festivos</strong>
-                            <br><small class="opacity-75">Ver y solicitar recuperaciones</small>
+                       
                         </div>
                     </a>
                 </div>
@@ -38,26 +38,38 @@
     </div>
 </div>
 
-<!-- Modal para pedir vacaciones (solo vacaciones) -->
+<!-- Modal para pedir vacaciones - DASHBOARD CON FLATPICKR -->
 <div class="modal modal-blur fade" id="newVacationModal" tabindex="-1" aria-labelledby="newVacationModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="newVacationModalLabel">Pedir Vacaciones</h5>
+                <h5 class="modal-title" id="newVacationModalLabel">
+                    <i class="ti ti-beach me-2"></i>
+                    Pedir Vacaciones
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="POST" action="{{ url_for('requests.create') }}">
                 <input type="hidden" name="type" value="vacation">
+                
+                <!-- Campos ocultos para el servidor -->
+                <input type="hidden" name="start_date" required>
+                <input type="hidden" name="end_date" required>
+                
                 <div class="modal-body">
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Fecha de inicio</label>
-                            <input type="date" name="start_date" class="form-control" required onchange="validateVacationDates()">
-                        </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Fecha de fin</label>
-                            <input type="date" name="end_date" class="form-control" required onchange="validateVacationDates()">
+                        <div class="col-12 mb-3">
+                            <label class="form-label required">Fechas de vacaciones</label>
+                            <div class="input-group">
+                                <input type="text" 
+                                       class="form-control date-range-picker" 
+                                       placeholder="Fecha inicio → Fecha fin" 
+                                       readonly>
+                                <span class="input-group-text">
+                                    <i class="ti ti-calendar-event"></i>
+                                </span>
+                            </div>
+                            <div class="form-hint">Haz clic para seleccionar el rango de fechas</div>
                         </div>
                         
                         <div class="col-12 mb-3">
@@ -79,7 +91,7 @@
     </div>
 </div>
 
-<!-- Modal para marcar festivos -->
+<!-- Modal para marcar festivos - DASHBOARD -->
 <div class="modal modal-blur fade" id="newHolidayModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <div class="modal-content">
@@ -98,7 +110,7 @@
                         
                         <div class="col-12 mb-3">
                             <label class="form-label">Descripción del festivo</label>
-                            <select name="description" class="form-select" onchange="toggleHolidayCustomDescription()">
+                            <select name="description" class="form-select" onchange="toggleDashboardCustomDescription()">
                                 <option value="">Seleccionar festivo...</option>
                                 {% for holiday_desc in common_holidays %}
                                     <option value="{{ holiday_desc }}">{{ holiday_desc }}</option>
@@ -107,7 +119,7 @@
                             </select>
                         </div>
                         
-                        <div class="col-12 mb-3 d-none" id="holidayCustomDescriptionDiv">
+                        <div class="col-12 mb-3 d-none" id="dashboardCustomDescriptionDiv">
                             <label class="form-label">Descripción personalizada</label>
                             <input type="text" name="custom_description" class="form-control" placeholder="Describe el festivo trabajado...">
                         </div>

@@ -1,569 +1,315 @@
 /**
- * Componente híbrido de rangos de fechas
- * Mantiene inputs nativos type="date" + overlay visual para selección de rango
+ * Flatpickr simple para rangos de fechas
+ * Implementación directa sin complicaciones
  */
 
-class DateRangeManager {
+class FlatpickrRanges {
     constructor() {
         this.instances = new Map();
-        this.validators = new Map();
-        this.overlayPicker = null;
+        this.init();
     }
 
-    /**
-     * Inicializar rango híbrido: inputs nativos + overlay de rango SOLO SI NO ES ADMIN
-     */
-    initRange(config) {
-        const {
-            startInput,
-            endInput,
-            validationDiv,
-            submitBtn,
-            type = 'vacation',
-            onValidate,
-            flatpickrOptions = {}
-        } = config;
-
-        const startEl = document.querySelector(startInput);
-        const endEl = document.querySelector(endInput);
-        
-        if (!startEl || !endEl) {
-            console.warn('DateRange: No se encontraron los inputs especificados');
-            return null;
-        }
-
-        // VERIFICAR SI ES MODAL DE ADMIN - NO aplicar overlay complicado
-        const isAdminModal = startEl.closest('#adminCreateRequestModal') !== null;
-        
-        if (isAdminModal) {
-            console.log('Modal de admin detectado - usando inputs nativos simples');
-            // Para admin: solo configurar validación, sin overlay
-            this._setupNativeValidation(startEl, endEl, config);
-            return {
-                validate: () => this._validateRange(config),
-                destroy: () => this.destroyRange(`${startInput}-${endInput}`)
-            };
-        }
-
-        // Para empleados: sistema completo con overlay
-        const rangeId = `${startInput}-${endInput}`;
-        
-        // Configurar eventos para abrir overlay
-        this._setupOverlayTriggers(startEl, endEl, config);
-
-        // Configurar validación en inputs nativos
-        this._setupNativeValidation(startEl, endEl, config);
-
-        // Guardar instancia
-        this.instances.set(rangeId, {
-            startEl,
-            endEl,
-            config,
-            type
+    init() {
+        document.addEventListener('DOMContentLoaded', () => {
+            this.initializeAllRanges();
         });
 
-        // Configurar validador
-        if (validationDiv || onValidate) {
-            this.validators.set(rangeId, {
-                validationDiv: validationDiv ? document.querySelector(validationDiv) : null,
-                submitBtn: submitBtn ? document.querySelector(submitBtn) : null,
-                onValidate,
-                type
-            });
-        }
+        // Re-inicializar cuando se muestren modales
+        document.addEventListener('shown.bs.modal', () => {
+            setTimeout(() => this.initializeAllRanges(), 100);
+        });
 
-        return {
-            validate: () => this._validateRange(config),
-            destroy: () => this.destroyRange(rangeId)
-        };
+        // Limpiar al ocultar modales
+        document.addEventListener('hidden.bs.modal', (event) => {
+            this.clearModalInstances(event.target);
+        });
     }
 
-    /**
-     * Configurar triggers para abrir overlay de rango
-     */
-    _setupOverlayTriggers(startEl, endEl, config) {
-        // DETECTAR SI ES MÓVIL - en móvil usar inputs nativos
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-                         window.innerWidth <= 768;
+    initializeAllRanges() {
+        // Buscar todos los inputs de rango de fechas
+        const rangeInputs = document.querySelectorAll('.date-range-picker');
         
-        if (isMobile) {
-            console.log('Dispositivo móvil detectado - usando inputs nativos');
-            // En móvil: permitir que funcionen los inputs nativos normalmente
+        rangeInputs.forEach(input => {
+            if (!input._flatpickr && input.offsetParent !== null) { // Visible
+                this.initRangePicker(input);
+            }
+        });
+
+        // También buscar inputs individuales de recovery
+        const recoveryInputs = document.querySelectorAll('.recovery-date-picker');
+        
+        recoveryInputs.forEach(input => {
+            if (!input._flatpickr && input.offsetParent !== null) {
+                this.initRecoveryPicker(input);
+            }
+        });
+    }
+
+    initRangePicker(input) {
+        const modal = input.closest('.modal');
+        const modalId = modal ? modal.id : 'unknown';
+        
+        // Buscar inputs ocultos para start_date y end_date
+        const startHidden = modal.querySelector('input[name="start_date"]');
+        const endHidden = modal.querySelector('input[name="end_date"]');
+        
+        if (!startHidden || !endHidden) {
+            console.warn('No se encontraron inputs start_date/end_date en', modalId);
+            return;
+        }
+
+        const config = {
+            mode: 'range',
+            locale: 'es',
+            dateFormat: 'Y-m-d',
+            minDate: 'today',
+            showMonths: window.innerWidth > 768 ? 2 : 1,
+            static: false,
+            onChange: (selectedDates, dateStr, instance) => {
+                this.handleRangeChange(selectedDates, input, startHidden, endHidden);
+                this.validateDates(modal);
+            },
+            onReady: () => {
+                // Cargar fechas existentes si las hay
+                this.loadExistingDates(input, startHidden, endHidden);
+            }
+        };
+
+        const fp = flatpickr(input, config);
+        this.instances.set(input, fp);
+        
+        // 🎯 HACER CLICKEABLE EL ICONO TAMBIÉN
+        this.makeIconClickable(input, fp);
+        
+        console.log(`✅ Range picker inicializado en ${modalId}`);
+    }
+
+    initRecoveryPicker(input) {
+        const modal = input.closest('.modal');
+        const modalId = modal ? modal.id : 'unknown';
+        
+        // Para recovery, buscar el input hidden recovery_date
+        const recoveryHidden = modal.querySelector('input[name="recovery_date"]');
+        
+        if (!recoveryHidden) {
+            console.warn('No se encontró input recovery_date en', modalId);
+            return;
+        }
+
+        const config = {
+            mode: 'single',
+            locale: 'es',
+            dateFormat: 'Y-m-d',
+            minDate: 'today',
+            static: false,
+            onChange: (selectedDates, dateStr, instance) => {
+                if (selectedDates.length === 1) {
+                    const date = selectedDates[0];
+                    const formatted = this.formatDate(date);
+                    
+                    recoveryHidden.value = formatted;
+                    
+                    // Mostrar fecha amigable
+                    input.value = `${date.toLocaleDateString('es-ES')} (1 día de recuperación)`;
+                    
+                    this.validateRecovery(modal);
+                }
+            }
+        };
+
+        const fp = flatpickr(input, config);
+        this.instances.set(input, fp);
+        
+        // 🎯 HACER CLICKEABLE EL ICONO TAMBIÉN
+        this.makeIconClickable(input, fp);
+        
+        console.log(`✅ Recovery picker inicializado en ${modalId}`);
+    }
+
+    handleRangeChange(selectedDates, input, startHidden, endHidden) {
+        if (selectedDates.length === 1) {
+            // Solo inicio seleccionado
+            const date = selectedDates[0];
+            startHidden.value = this.formatDate(date);
+            endHidden.value = '';
+            
+            input.value = `Desde ${date.toLocaleDateString('es-ES')} - Selecciona fecha fin`;
+            
+        } else if (selectedDates.length === 2) {
+            // Rango completo
+            const start = selectedDates[0];
+            const end = selectedDates[1];
+            
+            startHidden.value = this.formatDate(start);
+            endHidden.value = this.formatDate(end);
+            
+            const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+            input.value = `${start.toLocaleDateString('es-ES')} → ${end.toLocaleDateString('es-ES')} (${days} días)`;
+        }
+    }
+
+    loadExistingDates(input, startHidden, endHidden) {
+        const dates = [];
+        
+        if (startHidden.value) {
+            dates.push(startHidden.value);
+        }
+        
+        if (endHidden.value && endHidden.value !== startHidden.value) {
+            dates.push(endHidden.value);
+        }
+        
+        if (dates.length > 0) {
+            const fp = this.instances.get(input);
+            if (fp) {
+                fp.setDate(dates, false);
+                
+                // Actualizar texto visual
+                if (dates.length === 2) {
+                    const start = new Date(dates[0]);
+                    const end = new Date(dates[1]);
+                    const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+                    input.value = `${start.toLocaleDateString('es-ES')} → ${end.toLocaleDateString('es-ES')} (${days} días)`;
+                } else {
+                    const start = new Date(dates[0]);
+                    input.value = `Desde ${start.toLocaleDateString('es-ES')} - Selecciona fecha fin`;
+                }
+            }
+        }
+    }
+
+    validateDates(modal) {
+        const startHidden = modal.querySelector('input[name="start_date"]');
+        const endHidden = modal.querySelector('input[name="end_date"]');
+        const validationDiv = modal.querySelector('#validation-result, #vacation-validation-result');
+        const submitBtn = modal.querySelector('button[type="submit"]');
+        
+        if (!startHidden || !endHidden || !validationDiv || !submitBtn) return;
+        
+        const startDate = startHidden.value;
+        const endDate = endHidden.value;
+        
+        if (!startDate || !endDate) {
+            this.setValidationState(validationDiv, submitBtn, false, 'Selecciona ambas fechas');
             return;
         }
         
-        // Solo en desktop: interceptar y mostrar overlay
-        const self = this;
-        [startEl, endEl].forEach(input => {
-            input.addEventListener('focus', (e) => {
-                e.preventDefault();
-                input.blur();
-                setTimeout(() => {
-                    self._showRangeOverlay(startEl, endEl, config);
-                }, 50);
-            });
-            
-            input.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                input.blur();
-                setTimeout(() => {
-                    self._showRangeOverlay(startEl, endEl, config);
-                }, 50);
-            });
-
-            input.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-            });
-        });
-    }
-
-    /**
-     * Configurar validación en inputs nativos
-     */
-    _setupNativeValidation(startEl, endEl, config) {
-        // Validar cuando cambian los inputs nativos
-        [startEl, endEl].forEach(input => {
-            input.addEventListener('change', () => {
-                this._validateRange(config);
-            });
-        });
-    }
-
-    /**
-     * Mostrar overlay de selección de rango
-     */
-    _showRangeOverlay(startEl, endEl, config) {
-        // Destruir overlay anterior si existe
-        if (this.overlayPicker) {
-            this.overlayPicker.destroy();
-        }
-
-        // Crear elemento temporal invisible para el overlay
-        const tempInput = document.createElement('input');
-        tempInput.type = 'text';
-        tempInput.style.position = 'absolute';
-        tempInput.style.opacity = '0';
-        tempInput.style.pointerEvents = 'none';
-        tempInput.style.top = '-9999px';
-        document.body.appendChild(tempInput);
-
-        // Configurar Flatpickr en modo range sobre el elemento temporal
-        const flatpickrConfig = {
-            mode: config.type === 'recovery' ? 'single' : 'range',
-            locale: 'es',
-            dateFormat: 'Y-m-d',
-            inline: false,
-            minDate: 'today',
-            defaultDate: this._getDefaultDates(startEl, endEl, config.type),
-            onChange: (selectedDates, dateStr, instance) => {
-                this._handleOverlaySelection(selectedDates, startEl, endEl, config);
-            },
-            onClose: () => {
-                setTimeout(() => {
-                    if (this.overlayPicker) {
-                        this.overlayPicker.destroy();
-                        this.overlayPicker = null;
-                        if (tempInput.parentNode) {
-                            tempInput.parentNode.removeChild(tempInput);
-                        }
-                    }
-                }, 100);
-            }
-        };
-
-        // Crear y abrir overlay
-        this.overlayPicker = flatpickr(tempInput, flatpickrConfig);
-        this.overlayPicker.open();
-
-        // Posicionar el calendario cerca del input clickeado
-        setTimeout(() => {
-            this._positionOverlay(startEl);
-        }, 50);
-    }
-
-    /**
-     * Obtener fechas por defecto para el overlay
-     */
-    _getDefaultDates(startEl, endEl, type) {
-        const dates = [];
+        // Validar con API
+        const type = modal.querySelector('select[name="type"]')?.value || 'vacation';
         
-        if (startEl.value) {
-            dates.push(startEl.value);
+        fetch(`/api/validate-dates?start_date=${startDate}&end_date=${endDate}&type=${type}`)
+            .then(response => response.json())
+            .then(data => {
+                this.setValidationState(validationDiv, submitBtn, data.available, data.message);
+            })
+            .catch(error => {
+                console.error('Error validando:', error);
+                this.setValidationState(validationDiv, submitBtn, false, 'Error al validar fechas');
+            });
+    }
+
+    validateRecovery(modal) {
+        const recoveryHidden = modal.querySelector('input[name="recovery_date"]');
+        const validationDiv = modal.querySelector('#recovery-validation-result, #validation-result');
+        const submitBtn = modal.querySelector('button[type="submit"]');
+        
+        if (!recoveryHidden || !validationDiv || !submitBtn) return;
+        
+        const recoveryDate = recoveryHidden.value;
+        
+        if (!recoveryDate) {
+            this.setValidationState(validationDiv, submitBtn, false, 'Selecciona la fecha de recuperación');
+            return;
         }
         
-        if (type !== 'recovery' && endEl.value && endEl.value !== startEl.value) {
-            dates.push(endEl.value);
-        }
+        // Validar con API específica de recovery
+        const url = `/api/validate-recovery-date?recovery_date=${recoveryDate}`;
         
-        return dates.length > 0 ? dates : null;
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                this.setValidationState(validationDiv, submitBtn, data.valid, data.message);
+            })
+            .catch(error => {
+                console.error('Error validando recovery:', error);
+                this.setValidationState(validationDiv, submitBtn, false, 'Error al validar fecha');
+            });
     }
 
-    /**
-     * Posicionar overlay cerca del input
-     */
-    _positionOverlay(inputEl) {
-        if (!this.overlayPicker || !this.overlayPicker.calendarContainer) return;
-
-        const calendar = this.overlayPicker.calendarContainer;
-        const inputRect = inputEl.getBoundingClientRect();
+    setValidationState(validationDiv, submitBtn, isValid, message) {
+        validationDiv.style.display = 'block';
+        validationDiv.className = `alert alert-${isValid ? 'success' : 'danger'}`;
+        validationDiv.innerHTML = `<i class="ti ti-${isValid ? 'check' : 'x'} me-2"></i>${message}`;
         
-        calendar.style.position = 'fixed';
-        calendar.style.top = (inputRect.bottom + 5) + 'px';
-        calendar.style.left = inputRect.left + 'px';
-        calendar.style.zIndex = '9999';
-    }
-
-    /**
-     * Manejar selección en overlay y poblar inputs nativos
-     */
-    _handleOverlaySelection(selectedDates, startEl, endEl, config) {
-        if (config.type === 'recovery') {
-            // Recuperación: una fecha en ambos inputs
-            if (selectedDates.length === 1) {
-                const date = this._formatDate(selectedDates[0]);
-                startEl.value = date;
-                endEl.value = date;
-                
-                // Disparar eventos de cambio en inputs nativos
-                startEl.dispatchEvent(new Event('change', { bubbles: true }));
-                endEl.dispatchEvent(new Event('change', { bubbles: true }));
-                
-                // Cerrar overlay
-                if (this.overlayPicker) {
-                    this.overlayPicker.close();
-                }
-            }
-        } else {
-            // Vacaciones: rango de fechas
-            if (selectedDates.length === 1) {
-                // Solo inicio seleccionado
-                startEl.value = this._formatDate(selectedDates[0]);
-                startEl.dispatchEvent(new Event('change', { bubbles: true }));
-            } else if (selectedDates.length === 2) {
-                // Rango completo
-                startEl.value = this._formatDate(selectedDates[0]);
-                endEl.value = this._formatDate(selectedDates[1]);
-                
-                // Disparar eventos de cambio
-                startEl.dispatchEvent(new Event('change', { bubbles: true }));
-                endEl.dispatchEvent(new Event('change', { bubbles: true }));
-                
-                // Cerrar overlay
-                if (this.overlayPicker) {
-                    this.overlayPicker.close();
-                }
-            }
+        if (submitBtn) {
+            submitBtn.disabled = !isValid;
         }
     }
 
-    /**
-     * Formatear fecha para input type="date"
-     */
-    _formatDate(date) {
+    formatDate(date) {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
     }
 
-    /**
-     * Validar rango usando los valores de inputs nativos
-     */
-    async _validateRange(config) {
-        const { startInput, endInput, type } = config;
-        const rangeId = `${startInput}-${endInput}`;
-        const validator = this.validators.get(rangeId);
+    makeIconClickable(input, flatpickrInstance) {
+        // Buscar el icono en el input-group
+        const inputGroup = input.closest('.input-group');
+        if (!inputGroup) return;
         
-        if (!validator) return;
+        const icon = inputGroup.querySelector('.input-group-text');
+        if (!icon) return;
+        
+        // Hacer clickeable el icono
+        icon.style.cursor = 'pointer';
+        icon.addEventListener('click', () => {
+            flatpickrInstance.open();
+        });
+        
+        console.log('🎯 Icono clickeable configurado');
+    }
 
-        const startEl = document.querySelector(startInput);
-        const endEl = document.querySelector(endInput);
-        const { validationDiv, submitBtn, onValidate } = validator;
-
-        const startDate = startEl.value;
-        const endDate = endEl.value;
-
-        // Limpiar estados anteriores
-        this._clearValidationState(startEl, endEl, validationDiv, submitBtn);
-
-        if (!startDate || !endDate) {
-            this._setValidationState(false, 'Selecciona ambas fechas', startEl, endEl, validationDiv, submitBtn);
-            return;
-        }
-
-        // Validación básica de rango
-        if (new Date(startDate) > new Date(endDate)) {
-            this._setValidationState(false, 'La fecha de inicio no puede ser posterior a la de fin', startEl, endEl, validationDiv, submitBtn);
-            return;
-        }
-
-        // Para recuperaciones, validar que sea solo 1 día
-        if (type === 'recovery' && startDate !== endDate) {
-            this._setValidationState(false, 'Las recuperaciones solo pueden ser de 1 día', startEl, endEl, validationDiv, submitBtn);
-            return;
-        }
-
-        // Validación personalizada o con API
-        if (onValidate) {
-            try {
-                const result = await onValidate(startDate, endDate, type);
-                this._setValidationState(result.valid, result.message, startEl, endEl, validationDiv, submitBtn);
-            } catch (error) {
-                this._setValidationState(false, 'Error al validar fechas', startEl, endEl, validationDiv, submitBtn);
+    clearModalInstances(modal) {
+        const inputs = modal.querySelectorAll('.date-range-picker, .recovery-date-picker');
+        inputs.forEach(input => {
+            const fp = this.instances.get(input);
+            if (fp) {
+                fp.destroy();
+                this.instances.delete(input);
             }
-        } else {
-            this._validateWithAPI(startDate, endDate, type, startEl, endEl, validationDiv, submitBtn);
-        }
-    }
-
-    /**
-     * Validar con API del backend
-     */
-    async _validateWithAPI(startDate, endDate, type, startEl, endEl, validationDiv, submitBtn) {
-        try {
-            const response = await fetch(`/api/validate-dates?start_date=${startDate}&end_date=${endDate}&type=${type}`);
-            const data = await response.json();
-            
-            this._setValidationState(data.available, data.message, startEl, endEl, validationDiv, submitBtn);
-        } catch (error) {
-            console.error('Error validating dates:', error);
-            this._setValidationState(false, 'Error al validar fechas', startEl, endEl, validationDiv, submitBtn);
-        }
-    }
-
-    /**
-     * Establecer estado de validación
-     */
-    _setValidationState(isValid, message, startEl, endEl, validationDiv, submitBtn) {
-        // Actualizar div de validación
-        if (validationDiv) {
-            validationDiv.style.display = 'block';
-            validationDiv.className = `alert alert-${isValid ? 'success' : 'danger'}`;
-            validationDiv.innerHTML = `<i class="ti ti-${isValid ? 'check' : 'x'} me-2"></i>${message}`;
-        }
-
-        // Actualizar botón
-        if (submitBtn) {
-            submitBtn.disabled = !isValid;
-        }
-    }
-
-    /**
-     * Limpiar estado de validación
-     */
-    _clearValidationState(startEl, endEl, validationDiv, submitBtn) {
-        if (validationDiv) {
-            validationDiv.style.display = 'none';
-        }
-
-        if (submitBtn) {
-            submitBtn.disabled = true;
-        }
-    }
-
-    /**
-     * Destruir rango
-     */
-    destroyRange(rangeId) {
-        const instance = this.instances.get(rangeId);
-        if (instance) {
-            this.instances.delete(rangeId);
-            this.validators.delete(rangeId);
-        }
-        
-        if (this.overlayPicker) {
-            this.overlayPicker.destroy();
-            this.overlayPicker = null;
-        }
-    }
-
-    /**
-     * Destruir todas las instancias
-     */
-    destroyAll() {
-        this.instances.forEach((instance, rangeId) => {
-            this.destroyRange(rangeId);
         });
     }
 
-    /**
-     * Métodos de conveniencia
-     */
-    initVacationRange(modalId, options = {}) {
-        return this.initRange({
-            startInput: `${modalId} input[name="start_date"]`,
-            endInput: `${modalId} input[name="end_date"]`,
-            validationDiv: `${modalId} #validation-result, ${modalId} #vacation-validation-result`,
-            submitBtn: `${modalId} button[type="submit"]`,
-            type: 'vacation',
-            ...options
-        });
-    }
-
-    initRecoveryRange(modalId, options = {}) {
-        // Para recuperaciones, buscar el input correcto
-        const modal = document.querySelector(modalId);
-        if (!modal) return null;
-        
-        const recoveryInput = modal.querySelector('input[name="recovery_date"]');
-        if (recoveryInput) {
-            // Si hay input de recovery_date, usar ese
-            return this.initRange({
-                startInput: `${modalId} input[name="recovery_date"]`,
-                endInput: `${modalId} input[name="recovery_date"]`,
-                validationDiv: `${modalId} #validation-result`,
-                submitBtn: `${modalId} button[type="submit"]`,
-                type: 'recovery',
-                ...options
-            });
-        } else {
-            // Si no, usar start_date y end_date en modo recovery
-            return this.initRange({
-                startInput: `${modalId} input[name="start_date"]`,
-                endInput: `${modalId} input[name="end_date"]`,
-                validationDiv: `${modalId} #validation-result`,
-                submitBtn: `${modalId} button[type="submit"]`,
-                type: 'recovery',
-                ...options
-            });
-        }
+    destroy() {
+        this.instances.forEach(fp => fp.destroy());
+        this.instances.clear();
     }
 }
 
 // Instancia global
-window.dateRangeManager = new DateRangeManager();
-
-// Funciones de conveniencia globales
-window.initDateRange = (config) => window.dateRangeManager.initRange(config);
-window.initVacationRange = (modalId, options) => window.dateRangeManager.initVacationRange(modalId, options);
-window.initRecoveryRange = (modalId, options) => window.dateRangeManager.initRecoveryRange(modalId, options);
-
-// Auto-inicialización
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(() => {
-        initializeDateRanges();
-    }, 100);
-});
-
-function initializeDateRanges() {
-    // Buscar modales con inputs de fecha
-    const dateInputPairs = document.querySelectorAll('input[name="start_date"]');
-    
-    dateInputPairs.forEach(startInput => {
-        const modal = startInput.closest('.modal');
-        if (!modal) return;
-        
-        // SALTARSE MODALES DE ADMIN
-        if (modal.id === 'adminCreateRequestModal') {
-            console.log('Saltando modal de admin para date-range');
-            return;
-        }
-        
-        const endInput = modal.querySelector('input[name="end_date"]');
-        const typeSelect = modal.querySelector('select[name="type"]');
-        const validationDiv = modal.querySelector('#validation-result, #vacation-validation-result');
-        const submitBtn = modal.querySelector('button[type="submit"]');
-        
-        if (endInput) {
-            const modalId = `#${modal.id}`;
-            
-            if (typeSelect) {
-                // Modal con selector de tipo
-                typeSelect.addEventListener('change', function() {
-                    const currentType = this.value;
-                    if (currentType) {
-                        const rangeId = `${modalId} input[name="start_date"]-${modalId} input[name="end_date"]`;
-                        window.dateRangeManager.destroyRange(rangeId);
-                        
-                        window.dateRangeManager.initRange({
-                            startInput: `${modalId} input[name="start_date"]`,
-                            endInput: `${modalId} input[name="end_date"]`,
-                            validationDiv: validationDiv ? `#${validationDiv.id}` : null,
-                            submitBtn: submitBtn ? `${modalId} button[type="submit"]` : null,
-                            type: currentType
-                        });
-                    }
-                });
-            } else {
-                // Modal solo de vacaciones
-                window.dateRangeManager.initRange({
-                    startInput: `${modalId} input[name="start_date"]`,
-                    endInput: `${modalId} input[name="end_date"]`,
-                    validationDiv: validationDiv ? `#${validationDiv.id}` : null,
-                    submitBtn: submitBtn ? `${modalId} button[type="submit"]` : null,
-                    type: 'vacation'
-                });
-            }
-        }
-    });
-    
-    // Buscar inputs de recovery_date
-    const recoveryInputs = document.querySelectorAll('input[name="recovery_date"]');
-    recoveryInputs.forEach(input => {
-        const modal = input.closest('.modal');
-        if (!modal) return;
-        
-        const modalId = `#${modal.id}`;
-        
-        window.dateRangeManager.initRange({
-            startInput: `${modalId} input[name="recovery_date"]`,
-            endInput: `${modalId} input[name="recovery_date"]`,
-            type: 'recovery'
-        });
-    });
-}
-
-// Limpiar al cerrar modales
-document.addEventListener('hidden.bs.modal', function(event) {
-    const modal = event.target;
-    const modalId = `#${modal.id}`;
-    
-    window.dateRangeManager.instances.forEach((instance, rangeId) => {
-        if (rangeId.includes(modalId)) {
-            window.dateRangeManager.destroyRange(rangeId);
-        }
-    });
-});
-
-// Re-inicializar al mostrar modales
-document.addEventListener('shown.bs.modal', function(event) {
-    setTimeout(() => {
-        initializeDateRanges();
-    }, 100);
-});
+window.flatpickrRanges = new FlatpickrRanges();
 
 // Funciones de compatibilidad para código existente
 window.validateDates = function() {
     const activeModal = document.querySelector('.modal.show');
-    if (!activeModal) return;
-    
-    const modalId = `#${activeModal.id}`;
-    const rangeId = `${modalId} input[name="start_date"]-${modalId} input[name="end_date"]`;
-    const instance = window.dateRangeManager.instances.get(rangeId);
-    
-    if (instance) {
-        window.dateRangeManager._validateRange(instance.config);
+    if (activeModal) {
+        window.flatpickrRanges.validateDates(activeModal);
     }
 };
 
 window.validateVacationDates = function() {
+    window.validateDates();
+};
+
+window.validateRecoveryDate = function() {
     const activeModal = document.querySelector('.modal.show');
-    if (!activeModal) return;
-    
-    const startInput = activeModal.querySelector('input[name="start_date"]');
-    const endInput = activeModal.querySelector('input[name="end_date"]');
-    
-    if (startInput && endInput) {
-        const modalId = `#${activeModal.id}`;
-        window.dateRangeManager._validateRange({
-            startInput: `${modalId} input[name="start_date"]`,
-            endInput: `${modalId} input[name="end_date"]`,
-            type: 'vacation'
-        });
+    if (activeModal) {
+        window.flatpickrRanges.validateRecovery(activeModal);
     }
 };
 
 window.toggleRequestType = function() {
-    window.validateDates();
+    // El tipo cambió, re-validar
+    setTimeout(() => window.validateDates(), 100);
 };
