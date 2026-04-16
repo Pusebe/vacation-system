@@ -198,9 +198,42 @@ def migrate_existing_data():
         if departments_without_days:
             db.session.commit()
             print(f"Actualizados {len(departments_without_days)} departamentos con días por defecto")
+
+        # ==========================================================
+        # NUEVO: FOTO FIJA DE SALDOS PARA EL LIBRO MAYOR
+        # ==========================================================
+        from models import User
+        from models.transaction import VacationTransaction
+        from utils import get_canary_time
         
+        # Verificar si la tabla de transacciones está vacía
+        transactions_count = VacationTransaction.query.count()
+        if transactions_count == 0:
+            print("📸 Tomando foto inicial de saldos de vacaciones para el nuevo sistema de transacciones...")
+            current_year = get_canary_time().year
+            users = User.query.filter_by(is_active=True).all()
+            
+            for user in users:
+                # Calculamos el saldo EXACTO que tiene hoy con tu lógica actual
+                balance_info = user.get_vacation_balance_info(current_year)
+                dias_disponibles = balance_info['available_days']
+                
+                # Creamos el primer apunte en su libro mayor
+                initial_tx = VacationTransaction(
+                    user_id=user.id,
+                    year=current_year,
+                    days=dias_disponibles,
+                    transaction_type='initial_migration',
+                    description=f'Saldo inicial exacto migrado del sistema anterior'
+                )
+                db.session.add(initial_tx)
+            
+            db.session.commit()
+            print(f"✅ Migración de saldos completada con éxito para {len(users)} empleados.")
+            
     except Exception as e:
         print(f"Error en migración: {e}")
+        db.session.rollback()
         # Continuar sin fallar, las migraciones son opcionales
 
 if __name__ == '__main__':

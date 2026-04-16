@@ -109,6 +109,21 @@ class Request(db.Model):
         self.reviewed_by = admin_user.id
         
         try:
+            # NUEVO: Si son vacaciones, insertamos el gasto en el Libro Mayor
+            if self.type == 'vacation':
+                from models.transaction import VacationTransaction
+                days_to_deduct = self.calculate_days()
+                
+                # Crear la transacción en negativo
+                tx = VacationTransaction(
+                    user_id=self.user_id,
+                    year=self.start_date.year,
+                    days=-days_to_deduct,  # El menos indica que es un gasto
+                    transaction_type='vacation_consumed',
+                    description=f'Vacaciones del {self.start_date.strftime("%d/%m/%Y")} al {self.end_date.strftime("%d/%m/%Y")}'
+                )
+                db.session.add(tx)
+
             db.session.commit()
             
             # Crear notificación para el usuario
@@ -253,8 +268,22 @@ class Request(db.Model):
             return False, f"Error al actualizar: {str(e)}"
     
     def delete(self):
-        """Borrar solicitud (solo admin)"""
+        """Borrar solicitud (solo admin) e ingresar devolución si estaba aprobada"""
         try:
+            # Si borramos unas vacaciones que ya estaban aprobadas y cobradas, devolvemos los días
+            if self.status == 'approved' and self.type == 'vacation':
+                from models.transaction import VacationTransaction
+                days_to_refund = self.calculate_days()
+                
+                refund_tx = VacationTransaction(
+                    user_id=self.user_id,
+                    year=self.start_date.year,
+                    days=days_to_refund,  # En positivo porque es una devolución
+                    transaction_type='vacation_refund',
+                    description=f'Devolución por cancelación de vacaciones ({self.start_date.strftime("%d/%m/%Y")})'
+                )
+                db.session.add(refund_tx)
+
             db.session.delete(self)
             db.session.commit()
             return True, "Solicitud eliminada correctamente."

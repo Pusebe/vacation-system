@@ -262,60 +262,42 @@ class User(db.Model):
         return 0
 
     def get_vacation_days_available(self, year=None):
-        """Calcular días de vacaciones disponibles incluyendo arrastre completo del año anterior"""
+        """Calcular días de vacaciones sumando el libro mayor (transacciones)"""
         if not year:
+            from utils import get_canary_time
             year = get_canary_time().year
         
-        # Días base del año actual (con proporcional si aplica)
-        vacation_days_total = self.get_vacation_days_per_year(year)
-        vacation_days_used = self.get_vacation_days_used(year)
+        from models.transaction import VacationTransaction
+        from sqlalchemy import func
         
-        # Calcular días no usados del año anterior (sin límites)
-        carryover_days = 0
-        if year > 2025:  # Cambiado a 2024 para testing - cambiar a 2025 en producción
-            previous_year = year - 1
-            previous_total = self.get_vacation_days_per_year(previous_year)
-            previous_used = self.get_vacation_days_used(previous_year)
-            previous_unused = previous_total - previous_used
-            
-            # Arrastrar TODOS los días no usados (pueden ser muchos)
-            if previous_unused > 0:
-                carryover_days = previous_unused
+        # Simplemente suma toda la columna de días para este empleado y año
+        balance = db.session.query(func.sum(VacationTransaction.days)).filter(
+            VacationTransaction.user_id == self.id,
+            VacationTransaction.year == year
+        ).scalar()
         
-        total_available = vacation_days_total + carryover_days
-        return total_available - vacation_days_used
+        return balance or 0
 
     def is_vacation_balance_negative(self, year=None):
         """Verificar si el balance de vacaciones está en negativo"""
         return self.get_vacation_days_available(year) < 0
 
     def get_vacation_balance_info(self, year=None):
-        """Obtener información completa del balance de vacaciones incluyendo arrastre"""
+        """Obtener información del balance basada en transacciones"""
         if not year:
+            from utils import get_canary_time
             year = get_canary_time().year
         
-        # Días base del año
+        available_days = self.get_vacation_days_available(year)
         base_days = self.get_vacation_days_per_year(year)
-        used_days = self.get_vacation_days_used(year)
         
-        # Calcular arrastre del año anterior
-        carryover_days = 0
-        if year > 2025:  # Cambiado a 2024 para testing
-            previous_year = year - 1
-            previous_total = self.get_vacation_days_per_year(previous_year)
-            previous_used = self.get_vacation_days_used(previous_year)
-            previous_unused = previous_total - previous_used
-            
-            if previous_unused > 0:
-                carryover_days = previous_unused
-        
-        total_days = base_days + carryover_days
-        available_days = total_days - used_days
+        # Calculamos "usados" a la inversa para que los gráficos visuales no se rompan
+        used_days = base_days - available_days if available_days < base_days else 0
         
         return {
             'base_days': base_days,
-            'carryover_days': carryover_days,
-            'total_days': total_days,
+            'carryover_days': 0,  # Ya está diluido dentro del balance total migrado
+            'total_days': base_days,
             'used_days': used_days,
             'available_days': available_days,
             'is_negative': available_days < 0,
@@ -525,3 +507,47 @@ class User(db.Model):
         print(f"❌ No hay festivos disponibles para completar")
         return None
 
+    def check_and_load_annual_vacation(self):
+        """Verifica y carga los días de vacaciones del año actual si no existen"""
+        from models.transaction import VacationTransaction
+        from utils import get_canary_time
+        from models import db
+        
+        current_year = get_canary_time().year
+        
+        # 1. Mirar si ya tiene la carga de este año
+        exists = VacationTransaction.query.filter_by(
+            user_id=self.id, 
+            year=current_year, 
+            transaction_type='annual_load'
+        ).first()
+        
+        # OJO: Excluimos la carga si es el año de migración inicial (2026) 
+        # porque la foto fija ya hizo el trabajo este año.
+        # Así evitamos que a alguien de 2026 le meta +30 días extra de golpe.
+        if not exists and current_year > 2026:
+            # 2. Calcular balance del año anterior
+            last_year = current_year - 1
+            balance_last_year = self.get_vacation_days_available(year=last_year)
+            
+            # 3. Crear Arrastre (solo si no es 0)
+            if balance_last_year != 0:
+                arrastre = VacationTransaction(
+                    user_id=self.id,
+                    year=current_year,
+                    days=balance_last_year,
+                    transaction_type='carryover',
+                    description=f"Arrastre de saldo del año {last_year}"
+                )
+                db.session.add(arrastre)
+            
+            # 4. Crear Carga Anual (sus días de contrato)
+            carga = VacationTransaction(
+                user_id=self.id,
+                year=current_year,
+                days=self.get_vacation_days_per_year(current_year),
+                transaction_type='annual_load',
+                description=f"Carga anual de vacaciones {current_year}"
+            )
+            db.session.add(carga)
+            db.session.commit()

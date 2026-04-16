@@ -74,6 +74,23 @@ async function loadNotificationsList() {
     }
 }
 
+function marcarNotificacionesLeidas() {
+    // 1. Ocultamos el numerito rojo al instante añadiendo la clase 'd-none'
+    let badge = document.getElementById('notification-badge');
+    if (badge) {
+        badge.classList.add('d-none');
+    }
+    
+    // 2. Le mandamos el aviso silencioso al servidor
+    fetch('/notificaciones/leer', {
+        method: 'POST'
+    }).then(response => {
+        console.log("Notificaciones marcadas como leídas");
+    }).catch(error => {
+        console.error("Error al limpiar notificaciones:", error);
+    });
+}
+
 function renderNotifications(notifications) {
     const container = document.getElementById('notifications-container');
     

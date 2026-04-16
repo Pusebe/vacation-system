@@ -1,6 +1,6 @@
-from flask import Blueprint, render_template, g
+from flask import Blueprint, render_template, g, jsonify
 from utils import login_required
-from models import Request, WorkedHoliday, Department, User
+from models import Request, WorkedHoliday, Department, User, db
 from datetime import date, timedelta
 
 dashboard_bp = Blueprint('dashboard', __name__)
@@ -10,6 +10,8 @@ dashboard_bp = Blueprint('dashboard', __name__)
 @login_required
 def index():
     """Dashboard principal - diferente contenido según rol"""
+    g.user.check_and_load_annual_vacation()
+    
     if g.user.is_admin():
         return render_admin_dashboard()
     else:
@@ -144,3 +146,12 @@ def render_employee_dashboard():
                          pending_requests=pending_requests,
                          pending_holidays=pending_holidays,
                          common_holidays=common_holidays)
+
+# --- NUEVA FUNCIÓN PARA LAS NOTIFICACIONES ---
+@dashboard_bp.route('/notificaciones/leer', methods=['POST'])
+@login_required
+def leer_notificaciones():
+    """Marca todas las notificaciones del usuario como leídas en silencio"""
+    g.user.mark_all_notifications_read()
+    db.session.commit()
+    return jsonify({"status": "success"})
