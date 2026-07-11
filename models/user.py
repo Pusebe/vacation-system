@@ -507,7 +507,7 @@ class User(db.Model):
         print(f"❌ No hay festivos disponibles para completar")
         return None
 
-def check_and_load_annual_vacation(self):
+    def check_and_load_annual_vacation(self):
         """Verifica y carga los días de vacaciones del año actual si no existen"""
         from models.transaction import VacationTransaction
         from utils import get_canary_time
