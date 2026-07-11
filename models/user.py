@@ -507,7 +507,7 @@ class User(db.Model):
         print(f"❌ No hay festivos disponibles para completar")
         return None
 
-    def check_and_load_annual_vacation(self):
+def check_and_load_annual_vacation(self):
         """Verifica y carga los días de vacaciones del año actual si no existen"""
         from models.transaction import VacationTransaction
         from utils import get_canary_time
@@ -515,17 +515,16 @@ class User(db.Model):
         
         current_year = get_canary_time().year
         
-        # 1. Mirar si ya tiene la carga de este año
-        exists = VacationTransaction.query.filter_by(
-            user_id=self.id, 
-            year=current_year, 
-            transaction_type='annual_load'
+        # 1. Mirar si ya tiene la carga de este año (carga anual O foto de migración inicial)
+        exists = VacationTransaction.query.filter(
+            VacationTransaction.user_id == self.id,
+            VacationTransaction.year == current_year,
+            VacationTransaction.transaction_type.in_(['annual_load', 'initial_migration'])
         ).first()
         
-        # OJO: Excluimos la carga si es el año de migración inicial (2026) 
-        # porque la foto fija ya hizo el trabajo este año.
-        # Así evitamos que a alguien de 2026 le meta +30 días extra de golpe.
-        if not exists and current_year > 2026:
+        # OJO: Ya no bloqueamos el 2026. Si el usuario no tiene ninguna de las transacciones 
+        # anteriores (es nuevo en 2026), entrará y se le crearán sus días correspondientes.
+        if not exists:
             # 2. Calcular balance del año anterior
             last_year = current_year - 1
             balance_last_year = self.get_vacation_days_available(year=last_year)
@@ -541,7 +540,7 @@ class User(db.Model):
                 )
                 db.session.add(arrastre)
             
-            # 4. Crear Carga Anual (sus días de contrato)
+            # 4. Crear Carga Anual (sus días de contrato proporcionales)
             carga = VacationTransaction(
                 user_id=self.id,
                 year=current_year,
